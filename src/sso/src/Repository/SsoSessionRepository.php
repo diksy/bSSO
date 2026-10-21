@@ -95,6 +95,28 @@ final class SsoSessionRepository
         $this->exec('UPDATE sso_sessions SET revoked_at = ? WHERE sid = ? AND revoked_at IS NULL', [Db::fmt($now), $sid]);
     }
 
+    /** Atomik: true hanya bila sesi ini yang baru saja berpindah dari aktif ke dicabut (mencegah notifikasi ganda). */
+    public function revokeIfActive(string $sid, \DateTimeImmutable $now): bool
+    {
+        $stmt = $this->db->pdo()->prepare('UPDATE sso_sessions SET revoked_at = ? WHERE sid = ? AND revoked_at IS NULL');
+        $stmt->execute([Db::fmt($now), $sid]);
+
+        return $stmt->rowCount() === 1;
+    }
+
+    /**
+     * sid semua sesi user yang belum dicabut (termasuk yang sudah kedaluwarsa tapi belum ditandai).
+     *
+     * @return list<string>
+     */
+    public function listUnrevokedSidsForUser(int $userId): array
+    {
+        $stmt = $this->db->pdo()->prepare('SELECT sid FROM sso_sessions WHERE user_id = ? AND revoked_at IS NULL');
+        $stmt->execute([$userId]);
+
+        return array_map(static fn (array $r): string => (string) $r['sid'], $stmt->fetchAll());
+    }
+
     public function revokeAllForUser(int $userId, ?string $exceptSid, \DateTimeImmutable $now): int
     {
         $sql = 'UPDATE sso_sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL';
