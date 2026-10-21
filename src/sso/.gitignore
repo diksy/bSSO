@@ -1,4 +1,6 @@
 vendor/
+config/app.php
+config/database.php
 config/secrets.php
 keys/
 storage/logs/

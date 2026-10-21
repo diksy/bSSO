@@ -71,21 +71,20 @@ final class ContractTest extends TestCase
 
     public function testControllerStubMelempar501(): void
     {
-        $controller = new \App\Controller\HomeController();
+        $controller = new \App\Controller\LoginController();
         try {
-            $controller->index(new Request('GET', '/'));
+            $controller->form(new Request('GET', '/login'));
             self::fail('Harus melempar HttpException');
         } catch (HttpException $e) {
             self::assertSame(501, $e->status);
         }
     }
 
-    public function testRoutesTerdaftarDiBootstrapRouter(): void
+    public function testRoutesTerdaftarDiRouter(): void
     {
-        // Router masih stub: add() melempar LogicException sampai T1 mengisinya.
         $router = new Router();
-        $this->expectException(\LogicException::class);
         require self::ROOT . 'routes.php';
+        self::assertSame(\App\Controller\LoginController::class, $router->match(new Request('GET', '/login'))->handler[0]);
     }
 
     public function testMatriksAdminSesuaiRequirements(): void
