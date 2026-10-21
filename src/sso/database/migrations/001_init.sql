@@ -112,11 +112,11 @@ CREATE TABLE sso_sessions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE session_clients (
-  session_id_hash CHAR(64) NOT NULL,
+  session_sid CHAR(36) NOT NULL,
   client_id INT UNSIGNED NOT NULL,
   first_login_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (session_id_hash, client_id),
-  FOREIGN KEY (session_id_hash) REFERENCES sso_sessions(id_hash) ON DELETE CASCADE,
+  PRIMARY KEY (session_sid, client_id),
+  FOREIGN KEY (session_sid) REFERENCES sso_sessions(sid) ON DELETE CASCADE,
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -124,7 +124,7 @@ CREATE TABLE auth_codes (
   code_hash CHAR(64) PRIMARY KEY,
   client_id INT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
-  session_id_hash CHAR(64) NOT NULL,
+  session_sid CHAR(36) NOT NULL,
   redirect_uri VARCHAR(500) NOT NULL,
   scope VARCHAR(255) NOT NULL,
   nonce VARCHAR(128) NULL,
@@ -133,6 +133,8 @@ CREATE TABLE auth_codes (
   expires_at DATETIME NOT NULL,
   used_at DATETIME NULL,
   KEY idx_code_expires (expires_at),
+  KEY idx_code_session (session_sid),
+  FOREIGN KEY (session_sid) REFERENCES sso_sessions(sid) ON DELETE CASCADE,
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -143,7 +145,7 @@ CREATE TABLE refresh_tokens (
   auth_code_hash CHAR(64) NULL,                 -- asal family, untuk pencabutan saat code reuse
   client_id INT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
-  session_id_hash CHAR(64) NULL,
+  session_sid CHAR(36) NULL,
   scope VARCHAR(255) NOT NULL,
   issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   expires_at DATETIME NOT NULL,
@@ -152,6 +154,8 @@ CREATE TABLE refresh_tokens (
   KEY idx_rt_family (family_id),
   KEY idx_rt_code (auth_code_hash),
   KEY idx_rt_user (user_id),
+  KEY idx_rt_session (session_sid),
+  FOREIGN KEY (session_sid) REFERENCES sso_sessions(sid) ON DELETE CASCADE,
   KEY idx_rt_expires (expires_at),
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

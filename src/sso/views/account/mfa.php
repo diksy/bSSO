@@ -10,10 +10,17 @@
 <?php if ($user['mfa']): ?>
 <section class="card stack">
   <p><span class="badge badge-ok">MFA aktif</span> Akun Anda dilindungi kode TOTP.</p>
-  <div class="row">
-    <form method="post" action="/account/mfa/backup-codes"><?= csrf_field() ?><button class="btn btn-secondary" type="submit">Buat ulang kode cadangan</button></form>
-    <form method="post" action="/account/mfa/disable"><?= csrf_field() ?><button class="btn btn-danger" type="submit">Nonaktifkan MFA</button></form>
-  </div>
+  <?php if ($error): ?><div class="alert alert-err" role="alert"><?= e($error) ?></div><?php endif; ?>
+  <form method="post" action="/account/mfa/backup-codes" class="stack">
+    <?= csrf_field() ?>
+    <div class="field"><label for="pw-regen">Kata sandi</label><input id="pw-regen" type="password" name="password" autocomplete="current-password" required></div>
+    <div><button class="btn btn-secondary" type="submit">Buat ulang kode cadangan</button></div>
+  </form>
+  <form method="post" action="/account/mfa/disable" class="stack">
+    <?= csrf_field() ?>
+    <div class="field"><label for="pw-off">Kata sandi</label><input id="pw-off" type="password" name="password" autocomplete="current-password" required></div>
+    <div><button class="btn btn-danger" type="submit">Nonaktifkan MFA</button></div>
+  </form>
 </section>
 <?php else: ?>
 <section class="card stack form-narrow">
@@ -23,6 +30,7 @@
     <li>Pindai kode QR di bawah, atau masukkan kunci manual.</li>
     <li>Masukkan 6 digit yang muncul.</li>
   </ol>
+  <?php if ($qr): ?><p><img src="<?= e($qr) ?>" alt="Kode QR untuk aplikasi autentikator" width="200" height="200"></p><?php endif; ?>
   <p>Kunci manual: <code><?= e($secret) ?></code></p>
   <p class="hint">URI otpauth: <code><?= e($otpauthUri) ?></code></p>
   <?php if ($error): ?><div class="alert alert-err" role="alert"><?= e($error) ?></div><?php endif; ?>

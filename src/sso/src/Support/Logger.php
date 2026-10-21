@@ -28,6 +28,9 @@ final class Logger
     {
         $rules = [
             '/\b(password|passwd|pass|secret|client_secret|token|code|authorization|api[_-]?key|hmac_key)(["\']?\s*[=:]\s*)(Bearer\s+)?("[^"]*"|\'[^\']*\'|[^\s,;&]+)/i' => '$1$2[REDACTED]',
+            '#otpauth://\S+#i' => '[otpauth]',
+            '/\b[a-z2-9]{5}-[a-z2-9]{5}\b/' => '[REDACTED]',
+            '/\b[A-Z2-7]{16,}={0,6}/' => '[REDACTED]',
             '/\bBearer\s+[A-Za-z0-9\-._~+\/]+=*/i' => 'Bearer [REDACTED]',
             '/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/' => '[JWT]',
             '/\b[A-Fa-f0-9]{32,}\b/' => '[HEX]',

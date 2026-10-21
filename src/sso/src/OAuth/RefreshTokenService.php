@@ -13,7 +13,7 @@ final class RefreshTokenService
     public function issue(
         Client $client,
         User $user,
-        ?string $sessionIdHash,
+        ?string $sessionSid,
         string $scope,
         ?string $familyId,
         ?string $authCodeHash,

@@ -37,6 +37,7 @@ final class AccountPage
                 'email' => $user->email ?? '',
                 'created' => $fmt($user->createdAt),
                 'last_login' => $fmt($session->createdAt),
+                'mfa' => $user->mfaEnabledAt !== null,
                 'admin_role' => $this->roles->findByUserId($user->id)?->role,
             ],
         ], 'account', $status);

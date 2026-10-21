@@ -12,7 +12,7 @@ final class RefreshToken
         public readonly ?string $authCodeHash,
         public readonly int $clientId,
         public readonly int $userId,
-        public readonly ?string $sessionIdHash,
+        public readonly ?string $sessionSid,
         public readonly string $scope,
         public readonly \DateTimeImmutable $issuedAt,
         public readonly \DateTimeImmutable $expiresAt,

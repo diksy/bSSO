@@ -5,12 +5,13 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.2",
-        "ext-pdo_mysql": "*",
-        "ext-openssl": "*",
-        "ext-sodium": "*",
         "ext-curl": "*",
-        "ext-mbstring": "*",
         "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
+        "ext-pdo_mysql": "*",
+        "ext-sodium": "*",
+        "chillerlan/php-qrcode": "^5",
         "firebase/php-jwt": "^7.0"
     },
     "require-dev": {

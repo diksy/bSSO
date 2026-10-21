@@ -10,7 +10,7 @@ final class AuthCode
         public readonly string $codeHash,
         public readonly int $clientId,
         public readonly int $userId,
-        public readonly string $sessionIdHash,
+        public readonly string $sessionSid,
         public readonly string $redirectUri,
         public readonly string $scope,
         public readonly ?string $nonce,

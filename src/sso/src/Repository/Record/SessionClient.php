@@ -7,7 +7,7 @@ namespace App\Repository\Record;
 final class SessionClient
 {
     public function __construct(
-        public readonly string $sessionIdHash,
+        public readonly string $sessionSid,
         public readonly int $clientId,
         public readonly \DateTimeImmutable $firstLoginAt,
     ) {

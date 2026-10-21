@@ -15,7 +15,7 @@ final class SessionClientRepository
     }
 
     /** @return list<SessionClient> */
-    public function listForSession(string $sessionIdHash): array
+    public function listForSession(string $sessionSid): array
     {
         throw new \LogicException('belum diimplementasi');
     }
