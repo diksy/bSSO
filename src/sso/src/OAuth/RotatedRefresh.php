@@ -9,7 +9,7 @@ final class RotatedRefresh
     public function __construct(
         public readonly string $newToken,
         public readonly int $userId,
-        public readonly ?string $sessionIdHash,
+        public readonly ?string $sessionSid,
         public readonly string $scope,
     ) {
     }

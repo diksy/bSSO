@@ -78,6 +78,52 @@ final class UserRepository
         $this->exec('UPDATE users SET name = ?, updated_at = ? WHERE id = ?', [$name, $this->now(), $id]);
     }
 
+    /**
+     * Aktifkan MFA hanya bila belum aktif (atomik). $step = langkah TOTP yang dipakai verifikasi (anti-replay).
+     *
+     * @param list<string> $codeHashes
+     */
+    public function enableMfa(int $id, string $secretEnc, array $codeHashes, int $step, \DateTimeImmutable $at): bool
+    {
+        $stmt = $this->db->pdo()->prepare(
+            'UPDATE users SET mfa_secret_enc = ?, mfa_enabled_at = ?, mfa_backup_codes = ?, mfa_last_step = ?, updated_at = ? '
+            . 'WHERE id = ? AND mfa_enabled_at IS NULL',
+        );
+        $stmt->execute([$secretEnc, Db::fmt($at), json_encode($codeHashes), $step, $this->now(), $id]);
+
+        return $stmt->rowCount() === 1;
+    }
+
+    public function disableMfa(int $id): void
+    {
+        $this->exec(
+            'UPDATE users SET mfa_secret_enc = NULL, mfa_enabled_at = NULL, mfa_backup_codes = NULL, mfa_last_step = NULL, '
+            . 'updated_at = ? WHERE id = ?',
+            [$this->now(), $id],
+        );
+    }
+
+    /** @param list<string> $codeHashes */
+    public function setBackupCodes(int $id, array $codeHashes): void
+    {
+        $this->exec(
+            'UPDATE users SET mfa_backup_codes = ?, updated_at = ? WHERE id = ? AND mfa_enabled_at IS NOT NULL',
+            [json_encode($codeHashes), $this->now(), $id],
+        );
+    }
+
+    /** Anti-replay atomik: true hanya bila $step lebih baru dari mfa_last_step. */
+    public function claimMfaStep(int $id, int $step): bool
+    {
+        $stmt = $this->db->pdo()->prepare(
+            'UPDATE users SET mfa_last_step = ? WHERE id = ? AND mfa_enabled_at IS NOT NULL '
+            . 'AND (mfa_last_step IS NULL OR mfa_last_step < ?)',
+        );
+        $stmt->execute([$step, $id, $step]);
+
+        return $stmt->rowCount() === 1;
+    }
+
     /** Idempoten: hanya mengisi email_verified_at bila kosong; status pending menjadi active. */
     public function markEmailVerified(int $id, \DateTimeImmutable $at): void
     {

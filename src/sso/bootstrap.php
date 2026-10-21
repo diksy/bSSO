@@ -20,6 +20,7 @@ use App\Repository\SigningKeyRepository;
 use App\Repository\SsoSessionRepository;
 use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
+use App\Security\Crypto;
 use App\Security\PasswordHasher;
 use App\Security\RateLimiter;
 use App\Security\SignedTokens;
@@ -73,6 +74,14 @@ $container->set(Mailer::class, static fn (Container $c): Mailer => new PhpMailer
 $container->set(
     SessionTerminator::class,
     static fn (Container $c): SessionTerminator => new LocalSessionTerminator($c->get(SsoSessionRepository::class), $c->get(Clock::class)),
+);
+$container->set(
+    Crypto::class,
+    static function (Container $c): Crypto {
+        $secrets = (array) $c->get('config.secrets');
+
+        return new Crypto((array) ($secrets['keyring'] ?? []), (string) ($secrets['hmac_key'] ?? ''));
+    },
 );
 $container->set(PasswordHasher::class, static fn (): PasswordHasher => new PasswordHasher());
 $container->set(

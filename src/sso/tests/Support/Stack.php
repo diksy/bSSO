@@ -9,9 +9,12 @@ use App\Repository\AuditLogRepository;
 use App\Repository\LoginAttemptRepository;
 use App\Repository\SsoSessionRepository;
 use App\Repository\UserRepository;
+use App\Security\BackupCodes;
+use App\Security\Crypto;
 use App\Security\PasswordHasher;
 use App\Security\RateLimiter;
 use App\Security\SignedTokens;
+use App\Security\Totp;
 use App\Session\LocalSessionTerminator;
 use App\Session\SsoSessionManager;
 use App\Support\Audit;
@@ -32,6 +35,9 @@ final class Stack
     public AdminRoleRepository $roles;
     public AuditLogRepository $auditLogs;
     public PasswordHasher $hasher;
+    public Crypto $crypto;
+    public Totp $totp;
+    public BackupCodes $backup;
     public RateLimiter $limiter;
     public SsoSessionManager $manager;
     public LocalSessionTerminator $terminator;
@@ -52,6 +58,12 @@ final class Stack
         $this->roles = new AdminRoleRepository($this->db);
         $this->auditLogs = new AuditLogRepository($this->db);
         $this->hasher = new PasswordHasher();
+        $this->crypto = new Crypto(
+            ['current' => 'v1', 'keys' => ['v1' => base64_encode(str_repeat('a', 32)), 'v0' => base64_encode(str_repeat('b', 32))]],
+            str_repeat('h', 32),
+        );
+        $this->totp = new Totp($this->clock);
+        $this->backup = new BackupCodes($this->crypto, $this->users, $this->db);
         $this->limiter = new RateLimiter($this->attempts, $this->clock);
         $this->manager = new SsoSessionManager($this->sessions, $this->clock);
         $this->terminator = new LocalSessionTerminator($this->sessions, $this->clock);
