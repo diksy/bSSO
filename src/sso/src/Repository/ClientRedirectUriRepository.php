@@ -17,11 +17,30 @@ final class ClientRedirectUriRepository
     /** @return list<ClientRedirectUri> */
     public function listForClient(int $clientDbId, string $kind): array
     {
-        throw new \LogicException('belum diimplementasi');
+        $stmt = $this->db->pdo()->prepare('SELECT id, client_id, uri, kind FROM client_redirect_uris WHERE client_id = ? AND kind = ? ORDER BY id');
+        $stmt->execute([$clientDbId, $kind]);
+
+        return array_map(
+            static fn (array $r): ClientRedirectUri => new ClientRedirectUri((int) $r['id'], (int) $r['client_id'], (string) $r['uri'], (string) $r['kind']),
+            $stmt->fetchAll(),
+        );
     }
 
+    /** Exact match byte per byte (dibandingkan di PHP; kolasi DB tidak peka huruf besar/kecil). */
     public function exists(int $clientDbId, string $uri, string $kind): bool
     {
-        throw new \LogicException('belum diimplementasi');
+        foreach ($this->listForClient($clientDbId, $kind) as $registered) {
+            if ($registered->uri === $uri) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function add(int $clientDbId, string $uri, string $kind): void
+    {
+        $this->db->pdo()->prepare('INSERT INTO client_redirect_uris (client_id, uri, kind) VALUES (?, ?, ?)')
+            ->execute([$clientDbId, $uri, $kind]);
     }
 }
