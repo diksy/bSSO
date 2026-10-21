@@ -1,0 +1,10 @@
+parameters:
+    level: 6
+    paths:
+        - src
+        - tests
+        - bin
+    ignoreErrors:
+        # Stub kontrak: properti diisi modul pemilik.
+        - identifier: property.onlyWritten
+        - identifier: throws.unusedType

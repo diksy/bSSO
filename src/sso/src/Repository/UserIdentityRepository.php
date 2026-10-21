@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Repository;
+
+use App\Repository\Record\UserIdentity;
+use App\Support\Database;
+
+/** Satu class per tabel; SQL hanya di sini (PDO prepared). Metode *ForUpdate hanya di dalam transaction(). */
+final class UserIdentityRepository
+{
+    public function __construct(private readonly Database $db)
+    {
+    }
+
+    public function findByProviderUser(int $providerId, string $providerUserId): ?UserIdentity
+    {
+        throw new \LogicException('belum diimplementasi');
+    }
+
+    /** @return list<UserIdentity> */
+    public function listForUser(int $userId): array
+    {
+        throw new \LogicException('belum diimplementasi');
+    }
+}

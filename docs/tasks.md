@@ -6,7 +6,7 @@ Penolakan: jumlah review blocking (0–3)
 
 | ID | Modul | Fitur | Kesulitan | Status | Penolakan | Hasil review / catatan non-blocking |
 | --- | --- | --- | --- | --- | --- | --- |
-| T0 | kontrak | F1–F8 | sedang | todo | 0 | urutan & dependensi: architecture.md |
+| T0 | kontrak | F1–F8 | sedang | selesai | 1 | Lolos review ke-2. Non-blocking: tes urutan middleware (RequireAdmin sebelum RequireRecentAuth); T9/T10 verifikasi Csrf exclude + formPostCallback terikat sesi UI; rotateIfDue/Csrf/MaintenanceController::rotateKeys tidak diperiksa langsung |
 | T1 | fondasi | F1, F10 | sedang | todo | 0 | urutan & dependensi: architecture.md |
 | T2 | auth-lokal | F2, F7 | tinggi | todo | 0 | urutan & dependensi: architecture.md |
 | T3 | mfa | F3, F7 | tinggi | todo | 0 | urutan & dependensi: architecture.md |
