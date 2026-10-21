@@ -29,3 +29,4 @@
 | 2026-10-22 | POST `/federation/{slug}/callback` (Apple form_post) dikecualikan dari Csrf, handler `formPostCallback` hanya menyimpan `user` ke state lalu 303 ke GET callback; CSRF = state hash terikat sesi UI + nonce + PKCE | Cookie SameSite=Lax tidak terkirim pada POST lintas situs; satu jalur pemrosesan |
 | 2026-10-22 | Middleware rute: `class-string` atau `[class, ...args]`, di-resolve `Container::make` (dependensi dulu, argumen rute terakhir); `AdminPolicy::MATRIX` konstanta publik | Kontrak builder T0 jelas tanpa service locator di middleware |
 | 2026-10-22 | firebase/php-jwt dinaikkan ke ^7.0 | composer audit (CVE-2025-45769, <7.0.0) memblokir commit T0; belum dipakai kode, tes tetap lulus |
+| 2026-10-22 | CSP tanpa `form-action` (default-src none, tanpa inline script, frame-ancestors none) | Redirect login ke klien tidak boleh diblokir browser; risiko diterima (review T1) |
