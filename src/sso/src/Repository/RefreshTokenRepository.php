@@ -65,6 +65,15 @@ final class RefreshTokenRepository
         return $stmt->rowCount();
     }
 
+    /** Cabut semua refresh token milik satu sesi SSO (logout). */
+    public function revokeBySession(string $sessionSid, \DateTimeImmutable $at): int
+    {
+        $stmt = $this->db->pdo()->prepare('UPDATE refresh_tokens SET revoked_at = ? WHERE session_sid = ? AND revoked_at IS NULL');
+        $stmt->execute([Db::fmt($at), $sessionSid]);
+
+        return $stmt->rowCount();
+    }
+
     /** Pencabutan semua token yang terbit dari satu authorization code (reuse code). */
     public function revokeByAuthCodeHash(string $codeHash, \DateTimeImmutable $at): int
     {

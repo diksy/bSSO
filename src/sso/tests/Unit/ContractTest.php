@@ -71,9 +71,9 @@ final class ContractTest extends TestCase
 
     public function testControllerStubMelempar501(): void
     {
-        $controller = new \App\Controller\LogoutController();
+        $controller = new \App\Controller\Admin\MaintenanceController();
         try {
-            $controller->confirm(new Request('GET', '/logout'));
+            $controller->index(new Request('GET', '/admin/maintenance'));
             self::fail('Harus melempar HttpException');
         } catch (HttpException $e) {
             self::assertSame(501, $e->status);

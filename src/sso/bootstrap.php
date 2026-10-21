@@ -25,7 +25,13 @@ use App\Security\KeyManager;
 use App\Security\PasswordHasher;
 use App\Security\RateLimiter;
 use App\Security\SignedTokens;
-use App\Session\LocalSessionTerminator;
+use App\OAuth\TokenIssuer;
+use App\Session\BackchannelNotifier;
+use App\Session\LogoutService;
+use App\Support\CronRunner;
+use App\Support\Gc;
+use App\Support\HttpClient;
+use App\Support\UrlAllowlist;
 use App\Session\SsoSessionManager;
 use App\Support\Audit;
 use App\Support\Urls;
@@ -74,7 +80,47 @@ $container->set(Database::class, static fn (Container $c): Database => new Datab
 $container->set(Mailer::class, static fn (Container $c): Mailer => new PhpMailer((string) (($c->get('config.app'))['mail_from'] ?? '')));
 $container->set(
     SessionTerminator::class,
-    static fn (Container $c): SessionTerminator => new LocalSessionTerminator($c->get(SsoSessionRepository::class), $c->get(Clock::class)),
+    static fn (Container $c): SessionTerminator => $c->get(LogoutService::class),
+);
+$container->set(UrlAllowlist::class, static fn (): UrlAllowlist => new UrlAllowlist());
+$container->set(HttpClient::class, static fn (Container $c): HttpClient => new HttpClient($c->get(UrlAllowlist::class)));
+$container->set(
+    TokenIssuer::class,
+    static fn (Container $c): TokenIssuer => new TokenIssuer($c->get(KeyManager::class), $c->get(Urls::class), $c->get(Clock::class)),
+);
+$container->set(
+    BackchannelNotifier::class,
+    static fn (Container $c): BackchannelNotifier => new BackchannelNotifier(
+        $c->get(LogoutNotificationRepository::class),
+        $c->get(SessionClientRepository::class),
+        $c->get(ClientRepository::class),
+        $c->get(UserRepository::class),
+        $c->get(TokenIssuer::class),
+        $c->get(HttpClient::class),
+        $c->get(Clock::class),
+        $c->get(Audit::class),
+    ),
+);
+$container->set(
+    LogoutService::class,
+    static fn (Container $c): LogoutService => new LogoutService(
+        $c->get(SsoSessionRepository::class),
+        $c->get(RefreshTokenRepository::class),
+        $c->get(BackchannelNotifier::class),
+        $c->get(Database::class),
+        $c->get(Clock::class),
+        $c->get(Audit::class),
+        $c->get(Logger::class),
+    ),
+);
+$container->set(
+    CronRunner::class,
+    static fn (Container $c): CronRunner => new CronRunner(
+        $c->get(BackchannelNotifier::class),
+        $c->get(KeyManager::class),
+        new Gc(),
+        $c->get(Logger::class),
+    ),
 );
 $container->set(
     Crypto::class,

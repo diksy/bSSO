@@ -59,6 +59,11 @@ CREATE TABLE session_clients (
   FOREIGN KEY (session_sid) REFERENCES sso_sessions(sid) ON DELETE CASCADE,
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
 );
+CREATE TABLE logout_notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, client_id INTEGER NOT NULL, sid TEXT NOT NULL, user_uuid TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0, next_try_at TEXT NOT NULL, delivered_at TEXT NULL, last_error TEXT NULL,
+  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+);
 CREATE TABLE login_attempts (
   id INTEGER PRIMARY KEY AUTOINCREMENT, identifier TEXT NOT NULL, ip_address BLOB NOT NULL,
   success INTEGER NOT NULL, attempted_at TEXT NOT NULL
