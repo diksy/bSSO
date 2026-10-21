@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Federation\ProviderContext;
+use App\Federation\ProviderRegistry;
 use App\Http\Kernel;
 use App\Http\Router;
 use App\Repository\AdminRoleRepository;
@@ -144,6 +146,20 @@ $container->set(
             $dir,
         );
     },
+);
+$container->set(
+    ProviderContext::class,
+    static fn (Container $c): ProviderContext => new ProviderContext(
+        $c->get(HttpClient::class),
+        $c->get(Crypto::class),
+        $c->get(Clock::class),
+        $c->get(Urls::class),
+        SSO_ROOT . '/storage/cache',
+    ),
+);
+$container->set(
+    ProviderRegistry::class,
+    static fn (Container $c): ProviderRegistry => new ProviderRegistry($c->get(IdentityProviderRepository::class), $c->get(ProviderContext::class)),
 );
 $container->set(PasswordHasher::class, static fn (): PasswordHasher => new PasswordHasher());
 $container->set(

@@ -38,6 +38,21 @@ final class RateLimiter
         return $this->attempts->countFailures(self::norm($identifier), $this->clock->now()->modify(self::WINDOW)) >= self::EMAIL_LIMIT;
     }
 
+    /**
+     * Pembatas hitung-semua: tolak bila sudah ada $max catatan dalam jendela; bila lolos, catat satu percobaan.
+     * Dipakai endpoint yang menulis ke DB tanpa autentikasi (mis. awal federasi: 'fedstart:<ip>').
+     */
+    public function hit(string $identifier, string $ip, int $max, string $window = self::WINDOW): bool
+    {
+        $id = self::norm($identifier);
+        if ($this->attempts->countAll($id, $this->clock->now()->modify($window)) >= $max) {
+            return false;
+        }
+        $this->attempts->add($id, $ip, true, $this->clock->now());
+
+        return true;
+    }
+
     /** 60 request per klien per menit; request yang diizinkan dicatat. */
     public function tokenAllowed(string $clientId): bool
     {
