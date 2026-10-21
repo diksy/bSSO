@@ -4,6 +4,3 @@ parameters:
         - src
         - tests
         - bin
-    ignoreErrors:
-        # Stub kontrak: properti diisi modul pemilik.
-        - identifier: property.onlyWritten

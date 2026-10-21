@@ -98,6 +98,18 @@ final class LogoutNotificationRepository
         return (int) $stmt->fetchColumn();
     }
 
+    /** @return list<LogoutNotification> gagal permanen, terbaru dulu */
+    public function listPermanentFailures(int $limit): array
+    {
+        $stmt = $this->db->pdo()->prepare(
+            'SELECT ' . self::COLUMNS . ' FROM logout_notifications WHERE delivered_at IS NULL AND attempts >= ? '
+            . 'ORDER BY next_try_at DESC, id DESC LIMIT ' . max(1, min($limit, 100)),
+        );
+        $stmt->execute([self::MAX_ATTEMPTS]);
+
+        return array_map(fn (array $r): LogoutNotification => $this->hydrate($r), $stmt->fetchAll());
+    }
+
     /** Admin "retry": hidupkan lagi yang gagal permanen. */
     public function resetFailed(\DateTimeImmutable $now): int
     {
