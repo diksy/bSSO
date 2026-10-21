@@ -43,6 +43,11 @@ CREATE TABLE audit_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NULL, target_user_id INTEGER NULL, client_id INTEGER NULL,
   event TEXT NOT NULL, ip_address BLOB NULL, context TEXT NULL, created_at TEXT NOT NULL
 );
+CREATE TABLE signing_keys (
+  kid TEXT PRIMARY KEY, alg TEXT NOT NULL DEFAULT 'RS256', public_key_pem TEXT NOT NULL, private_key_path TEXT NOT NULL,
+  status TEXT NOT NULL, created_at TEXT NOT NULL, activated_at TEXT NULL, retiring_at TEXT NULL, retired_at TEXT NULL
+);
+CREATE TABLE settings (name TEXT PRIMARY KEY, value TEXT NOT NULL, updated_by INTEGER NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE admin_roles (user_id INTEGER PRIMARY KEY, role TEXT NOT NULL, granted_by INTEGER NULL, granted_at TEXT NOT NULL);
 SQL);
 
