@@ -40,6 +40,14 @@ final class SsoSessionRepository
         return array_map(fn (array $r): SsoSession => $this->hydrate($r), $stmt->fetchAll());
     }
 
+    public function countActive(\DateTimeImmutable $now): int
+    {
+        $stmt = $this->db->pdo()->prepare('SELECT COUNT(*) FROM sso_sessions WHERE revoked_at IS NULL AND expires_at > ?');
+        $stmt->execute([Db::fmt($now)]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
     public function findByIdHashForUpdate(string $idHash): ?SsoSession
     {
         return $this->one('WHERE id_hash = ?', [$idHash], true);

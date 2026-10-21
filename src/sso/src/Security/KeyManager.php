@@ -18,7 +18,7 @@ use Firebase\JWT\Key;
 final class KeyManager
 {
     private const TYPES = ['JWT', 'at+jwt', 'logout+jwt'];
-    private const DEFAULT_ROTATION_DAYS = 90;
+    public const DEFAULT_ROTATION_DAYS = 90;
     private const DEFAULT_OVERLAP_DAYS = 2;
     private const LEEWAY = 30;
 

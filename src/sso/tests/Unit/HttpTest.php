@@ -167,6 +167,10 @@ final class HttpTest extends TestCase
         self::assertSame(1, $n);
 
         $c->set(\App\Repository\AdminRoleRepository::class, static fn (): object => (new \ReflectionClass(\App\Repository\AdminRoleRepository::class))->newInstanceWithoutConstructor());
+        // Dependensi opsional (idle/audit) tidak dibutuhkan untuk menguji pengikatan argumen rute.
+        foreach ([\App\Repository\SettingRepository::class, \App\Support\Clock::class, \App\Session\SessionTerminator::class, \App\Session\SsoSessionManager::class, \App\Support\Audit::class] as $optional) {
+            $c->set($optional, null);
+        }
         $mw = $c->make(RequireAdmin::class, ['users', 'manage']);
         self::assertSame('users', $mw->module);
         self::assertSame('manage', $mw->need);

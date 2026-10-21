@@ -31,6 +31,30 @@ final class SettingRepository
         return array_map(fn (array $r): Setting => $this->hydrate($r), $rows);
     }
 
+    /** Simpan nilai (JSON). Portabel: cek dulu lalu UPDATE/INSERT; panggil di dalam transaction(). */
+    public function set(string $name, mixed $value, ?int $updatedBy, \DateTimeImmutable $at): void
+    {
+        $json = json_encode($value, JSON_THROW_ON_ERROR);
+        if ($this->get($name) === null) {
+            $this->db->pdo()
+                ->prepare('INSERT INTO settings (name, value, updated_by, updated_at) VALUES (?, ?, ?, ?)')
+                ->execute([$name, $json, $updatedBy, Db::fmt($at)]);
+
+            return;
+        }
+        $this->db->pdo()
+            ->prepare('UPDATE settings SET value = ?, updated_by = ?, updated_at = ? WHERE name = ?')
+            ->execute([$json, $updatedBy, Db::fmt($at), $name]);
+    }
+
+    /** Nilai bilangan bulat dengan nilai bawaan. */
+    public function int(string $name, int $default): int
+    {
+        $v = $this->get($name)?->value;
+
+        return is_int($v) || (is_string($v) && ctype_digit($v)) ? (int) $v : $default;
+    }
+
     /** @param array<string,mixed> $r */
     private function hydrate(array $r): Setting
     {
