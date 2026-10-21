@@ -6,4 +6,6 @@ declare(strict_types=1);
 return [
     'debug' => false,
     'mail_from' => '',
+    // URL publik SSO (https://sso.contoh.id) untuk tautan di email; tidak diambil dari header Host.
+    'base_url' => '',
 ];
