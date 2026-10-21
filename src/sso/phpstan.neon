@@ -7,4 +7,3 @@ parameters:
     ignoreErrors:
         # Stub kontrak: properti diisi modul pemilik.
         - identifier: property.onlyWritten
-        - identifier: throws.unusedType
