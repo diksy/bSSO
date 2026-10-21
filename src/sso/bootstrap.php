@@ -20,7 +20,13 @@ use App\Repository\SigningKeyRepository;
 use App\Repository\SsoSessionRepository;
 use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
+use App\Security\PasswordHasher;
+use App\Security\RateLimiter;
+use App\Security\SignedTokens;
 use App\Session\LocalSessionTerminator;
+use App\Session\SsoSessionManager;
+use App\Support\Audit;
+use App\Support\Urls;
 use App\Session\SessionTerminator;
 use App\Support\Clock;
 use App\Support\Container;
@@ -64,7 +70,28 @@ $container->set('config.database', static fn (): array => (array) require SSO_RO
 $container->set(Clock::class, static fn (): Clock => new SystemClock());
 $container->set(Database::class, static fn (Container $c): Database => new Database((array) $c->get('config.database')));
 $container->set(Mailer::class, static fn (Container $c): Mailer => new PhpMailer((string) (($c->get('config.app'))['mail_from'] ?? '')));
-$container->set(SessionTerminator::class, static fn (): SessionTerminator => new LocalSessionTerminator());
+$container->set(
+    SessionTerminator::class,
+    static fn (Container $c): SessionTerminator => new LocalSessionTerminator($c->get(SsoSessionRepository::class), $c->get(Clock::class)),
+);
+$container->set(PasswordHasher::class, static fn (): PasswordHasher => new PasswordHasher());
+$container->set(
+    RateLimiter::class,
+    static fn (Container $c): RateLimiter => new RateLimiter($c->get(LoginAttemptRepository::class), $c->get(Clock::class)),
+);
+$container->set(
+    SsoSessionManager::class,
+    static fn (Container $c): SsoSessionManager => new SsoSessionManager($c->get(SsoSessionRepository::class), $c->get(Clock::class)),
+);
+$container->set(
+    SignedTokens::class,
+    static fn (Container $c): SignedTokens => new SignedTokens((string) (($c->get('config.secrets'))['hmac_key'] ?? ''), $c->get(Clock::class)),
+);
+$container->set(
+    Audit::class,
+    static fn (Container $c): Audit => new Audit($c->get(AuditLogRepository::class), $c->get(Clock::class)),
+);
+$container->set(Urls::class, static fn (Container $c): Urls => new Urls((string) (($c->get('config.app'))['base_url'] ?? '')));
 
 foreach ([
     UserRepository::class, IdentityProviderRepository::class, UserIdentityRepository::class,

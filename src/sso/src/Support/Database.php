@@ -10,8 +10,15 @@ final class Database
     private int $depth = 0;
 
     /** @param array<string,mixed> $config host, port, name, user, pass (dari config/database.php) */
-    public function __construct(private readonly array $config)
+    public function __construct(private readonly array $config, ?\PDO $injected = null)
     {
+        $this->pdo = $injected;
+    }
+
+    /** Apakah driver MySQL/MariaDB (SELECT ... FOR UPDATE didukung). */
+    public function isMysql(): bool
+    {
+        return $this->pdo()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql';
     }
 
     /** PDO dengan ERRMODE_EXCEPTION dan EMULATE_PREPARES=false. */

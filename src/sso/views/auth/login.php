@@ -12,8 +12,10 @@
     <label for="password">Kata sandi</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required>
   </div>
+  <div class="field"><label><input type="checkbox" name="remember" value="1"> Ingat saya di perangkat ini</label></div>
   <button class="btn btn-primary btn-block" type="submit">Masuk</button>
 </form>
+<p class="muted"><a href="/password/forgot">Lupa kata sandi?</a> · <a href="/register">Daftar</a></p>
 <div class="divider"><span>atau lanjutkan dengan</span></div>
 <ul class="provider-list">
   <?php foreach ($providers as $p): ?>
