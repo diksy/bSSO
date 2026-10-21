@@ -76,6 +76,23 @@ CREATE TABLE signing_keys (
   kid TEXT PRIMARY KEY, alg TEXT NOT NULL DEFAULT 'RS256', public_key_pem TEXT NOT NULL, private_key_path TEXT NOT NULL,
   status TEXT NOT NULL, created_at TEXT NOT NULL, activated_at TEXT NULL, retiring_at TEXT NULL, retired_at TEXT NULL
 );
+CREATE TABLE identity_providers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL, protocol TEXT NOT NULL,
+  driver TEXT NOT NULL, client_id TEXT NOT NULL, client_secret_enc BLOB NULL, discovery_url TEXT NULL, authorize_url TEXT NULL,
+  token_url TEXT NULL, userinfo_url TEXT NULL, scopes TEXT NOT NULL, trust_email INTEGER NOT NULL DEFAULT 0,
+  extra_config TEXT NULL, is_enabled INTEGER NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE user_identities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, provider_id INTEGER NOT NULL, provider_user_id TEXT NOT NULL,
+  email TEXT NULL, email_verified INTEGER NOT NULL DEFAULT 0, raw_profile TEXT NULL,
+  linked_at TEXT NOT NULL, last_login_at TEXT NULL, UNIQUE (provider_id, provider_user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (provider_id) REFERENCES identity_providers(id)
+);
+CREATE TABLE federation_states (
+  state_hash TEXT PRIMARY KEY, provider_id INTEGER NOT NULL, nonce TEXT NULL, code_verifier TEXT NULL,
+  pending_request TEXT NOT NULL, link_to_user_id INTEGER NULL, expires_at TEXT NOT NULL
+);
 CREATE TABLE settings (name TEXT PRIMARY KEY, value TEXT NOT NULL, updated_by INTEGER NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE admin_roles (user_id INTEGER PRIMARY KEY, role TEXT NOT NULL, granted_by INTEGER NULL, granted_at TEXT NOT NULL);
 SQL);

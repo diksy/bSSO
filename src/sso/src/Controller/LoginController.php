@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Http\Request;
 use App\Http\Response;
+use App\Repository\IdentityProviderRepository;
 use App\Repository\UserRepository;
 use App\Security\PasswordHasher;
 use App\Security\RateLimiter;
@@ -28,6 +29,7 @@ final class LoginController
         private readonly SsoSessionManager $sessions,
         private readonly Audit $audit,
         private readonly Clock $clock,
+        private readonly ?IdentityProviderRepository $providers = null,
     ) {
     }
 
@@ -104,13 +106,16 @@ final class LoginController
 
     private function render(string $next, string $email, ?string $error, int $status = 200): Response
     {
-        // TODO(T7): daftar provider aktif dari IdentityProviderRepository::listEnabled().
+        $providers = [];
+        foreach ($this->providers?->listEnabled() ?? [] as $p) {
+            $providers[] = ['slug' => $p->slug, 'name' => $p->displayName];
+        }
         return $this->view->render('auth/login', [
             'title' => 'Masuk',
             'error' => $error,
             'next' => $next,
             'email' => $email,
-            'providers' => [],
+            'providers' => $providers,
         ], 'auth', $status);
     }
 }

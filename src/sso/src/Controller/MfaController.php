@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Federation\FederationException;
+use App\Federation\IdentityLinkCompleter;
+use App\Federation\NormalizedProfile;
 use App\Http\Request;
 use App\Http\Response;
+use App\Repository\IdentityProviderRepository;
 use App\Repository\Record\User;
 use App\Repository\UserRepository;
 use App\Security\BackupCodes;
@@ -35,6 +39,8 @@ final class MfaController
         private readonly SsoSessionManager $sessions,
         private readonly Audit $audit,
         private readonly Clock $clock,
+        private readonly ?IdentityLinkCompleter $links = null,
+        private readonly ?IdentityProviderRepository $providers = null,
     ) {
     }
 
@@ -79,6 +85,18 @@ final class MfaController
 
         UiSession::forget('pre_mfa');
         UiSession::regenerate();
+        // Tautan federasi yang menunggu (cabang konfirmasi) ditulis hanya setelah MFA lulus.
+        if ($pre['link'] !== null && $this->links !== null && $this->providers !== null) {
+            $provider = $this->providers->findById((int) ($pre['link']['provider_id'] ?? 0));
+            try {
+                if ($provider !== null) {
+                    $this->links->link($user->id, $provider, NormalizedProfile::fromArray((array) ($pre['link']['profile'] ?? [])));
+                }
+            } catch (FederationException) {
+                // Login tetap berlanjut; tautan ditolak (mis. identitas sudah milik akun lain) dan dicatat di audit.
+                $this->audit->record('federation.link_failed', $user->id, $user->id);
+            }
+        }
         $cookie = $this->sessions->start($user->id, $pre['method'], true, $request, $pre['remember']);
         $this->audit->record('login.success', $user->id, $user->id, null, ['method' => $pre['method'], 'mfa' => $method]);
 
@@ -97,7 +115,7 @@ final class MfaController
         return $this->backup->consume($user, $code) ? 'backup' : null;
     }
 
-    /** @return array{user_id: int, next: string, remember: bool, method: string}|null */
+    /** @return array{user_id: int, next: string, remember: bool, method: string, link: ?array<string,mixed>}|null */
     private function pending(): ?array
     {
         $pre = UiSession::get('pre_mfa');
@@ -115,6 +133,7 @@ final class MfaController
             'next' => SafePath::clean(is_string($pre['next'] ?? null) ? $pre['next'] : null),
             'remember' => ($pre['remember'] ?? false) === true,
             'method' => is_string($pre['method'] ?? null) ? $pre['method'] : 'password',
+            'link' => is_array($pre['link'] ?? null) ? $pre['link'] : null,
         ];
     }
 

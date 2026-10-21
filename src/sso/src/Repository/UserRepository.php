@@ -73,6 +73,22 @@ final class UserRepository
         return $stmt->rowCount() === 1;
     }
 
+    /**
+     * Akun pra-daftar yang belum terverifikasi diambil alih pemilik email sah (terbukti lewat provider tepercaya):
+     * password_hash dikosongkan (penyerang pra-pendaftaran kehilangan akses), email ditandai terverifikasi, status active.
+     * True bila baris berubah; akun terverifikasi tidak pernah tersentuh.
+     */
+    public function claimUnverifiedByFederation(int $id, \DateTimeImmutable $at): bool
+    {
+        $stmt = $this->db->pdo()->prepare(
+            'UPDATE users SET password_hash = NULL, email_verified_at = ?, status = ?, updated_at = ? '
+            . "WHERE id = ? AND email_verified_at IS NULL AND status IN ('pending', 'active')",
+        );
+        $stmt->execute([Db::fmt($at), 'active', $this->now(), $id]);
+
+        return $stmt->rowCount() === 1;
+    }
+
     public function updateName(int $id, string $name): void
     {
         $this->exec('UPDATE users SET name = ?, updated_at = ? WHERE id = ?', [$name, $this->now(), $id]);
