@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Http\HttpException;
 use App\Http\Request;
 use App\Http\Response;
+use App\Security\KeyManager;
 
 final class JwksController
 {
-    // Stub kontrak: 501 sampai modul pemilik mengisi badan.
+    public function __construct(private readonly KeyManager $keys)
+    {
+    }
 
     public function show(Request $request): Response
     {
-        throw new HttpException(501);
+        return Response::json($this->keys->jwks())
+            ->withHeader('Cache-Control', 'public, max-age=3600')
+            ->withHeader('Access-Control-Allow-Origin', '*');
     }
 }

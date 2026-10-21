@@ -21,6 +21,7 @@ use App\Repository\SsoSessionRepository;
 use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
 use App\Security\Crypto;
+use App\Security\KeyManager;
 use App\Security\PasswordHasher;
 use App\Security\RateLimiter;
 use App\Security\SignedTokens;
@@ -81,6 +82,21 @@ $container->set(
         $secrets = (array) $c->get('config.secrets');
 
         return new Crypto((array) ($secrets['keyring'] ?? []), (string) ($secrets['hmac_key'] ?? ''));
+    },
+);
+$container->set(
+    KeyManager::class,
+    static function (Container $c): KeyManager {
+        $dir = (($c->get('config.app'))['key_dir'] ?? '') !== '' ? (string) $c->get('config.app')['key_dir'] : SSO_ROOT . '/keys';
+
+        return new KeyManager(
+            $c->get(SigningKeyRepository::class),
+            $c->get(SettingRepository::class),
+            $c->get(Database::class),
+            $c->get(Clock::class),
+            $c->get(Audit::class),
+            $dir,
+        );
     },
 );
 $container->set(PasswordHasher::class, static fn (): PasswordHasher => new PasswordHasher());
