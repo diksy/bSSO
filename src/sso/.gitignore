@@ -1,0 +1,9 @@
+vendor/
+config/secrets.php
+keys/
+storage/logs/
+storage/cache/
+storage/sessions/
+storage/install.lock
+.phpunit.cache/
+.phpunit.result.cache

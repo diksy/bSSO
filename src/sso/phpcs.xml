@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<ruleset name="BikininSSO">
+    <rule ref="PSR12"/>
+    <file>src</file>
+    <file>tests</file>
+    <file>bin</file>
+    <arg name="colors"/>
+    <arg value="p"/>
+</ruleset>

@@ -1,0 +1,4 @@
+# Stub kontrak; T1 melengkapi (HTTPS redirect, rewrite ke index.php).
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L]
