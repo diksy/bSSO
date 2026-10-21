@@ -1,0 +1,20 @@
+# Konfigurasi agen & dokumen setup lokal
+.claude/
+CLAUDE.md
+SETUP.md
+
+# Rahasia
+.env
+.env.*
+*.pem
+*.key
+*.p8
+**/config/secrets.php
+**/keys/
+
+# Dependensi & runtime
+vendor/
+node_modules/
+**/storage/logs/
+**/storage/cache/
+**/storage/install.lock

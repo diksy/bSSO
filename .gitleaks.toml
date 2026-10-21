@@ -1,0 +1,9 @@
+# Contoh JWT terpotong di panduan integrasi (bukan rahasia); hanya untuk berkas ini.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Contoh token di dokumentasi panduan integrasi"
+condition = "AND"
+paths = ['''panduan-integrasi\.md$''']
+regexes = ['''eyJ[A-Za-z0-9_.\-]*''']
