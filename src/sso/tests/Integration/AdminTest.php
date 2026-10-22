@@ -642,9 +642,10 @@ final class AdminTest extends TestCase
 
     public function testInstallMembuatSuperadminLaluTerkunci(): void
     {
+        putenv('BSSO_INSTALL_TOKEN=rahasia-token');
         $c = $this->installer();
         self::assertSame(200, $c->form(new Request('GET', '/install'))->status);
-        $res = $c->submit(new Request('POST', '/install', [], $this->installBody(), [], [], [], '198.51.100.7'));
+        $res = $c->submit(new Request('POST', '/install', [], $this->installBody() + ['install_token' => 'rahasia-token'], [], [], [], '198.51.100.7'));
         self::assertSame(200, $res->status);
         self::assertStringContainsString('Pemasangan selesai', $res->body);
         self::assertFileExists($this->lock);
@@ -683,17 +684,47 @@ final class AdminTest extends TestCase
         self::assertTrue($g2->acquire());
     }
 
-    public function testInstallGagalValidasiTidakMengunciDanTokenOpsional(): void
+    public function testInstallTanpaTokenDanTokenSalahSeragam404(): void
     {
         $c = $this->installer();
-        $req = static fn (array $b): Request => new Request('POST', '/install', [], $b, [], [], [], '198.51.100.7');
+        $req = static fn (string $m, array $b = [], array $h = []): Request => new Request($m, '/install', [], $b, $h, [], [], '198.51.100.7');
+        $attempts = [
+            fn () => $c->form($req('GET')),
+            fn () => $c->submit($req('POST', $this->installBody() + ['install_token' => ''])),
+            fn () => $c->submit($req('POST', $this->installBody())),
+        ];
+        putenv('BSSO_INSTALL_TOKEN=rahasia-token');
+        $attempts[] = fn () => $c->submit($req('POST', $this->installBody() + ['install_token' => 'salah']));
+        $attempts[] = fn () => $c->submit($req('POST', $this->installBody()));
+        foreach ($attempts as $i => $f) {
+            if ($i < 3) {
+                putenv('BSSO_INSTALL_TOKEN');
+            } else {
+                putenv('BSSO_INSTALL_TOKEN=rahasia-token');
+            }
+            try {
+                $f();
+                self::fail('harus 404');
+            } catch (HttpException $e) {
+                self::assertSame(404, $e->status);
+            }
+        }
+        self::assertFileDoesNotExist($this->lock);
+        self::assertCount(0, $this->s->roles->listAll());
+        // token benar lewat header diterima
+        $res = $c->submit($req('POST', $this->installBody(), ['x-install-token' => 'rahasia-token']));
+        self::assertSame(200, $res->status);
+    }
+
+    public function testInstallGagalValidasiTidakMengunciDanTokenWajib(): void
+    {
+        putenv('BSSO_INSTALL_TOKEN=rahasia-token');
+        $c = $this->installer();
+        $req = static fn (array $b): Request => new Request('POST', '/install', [], $b + ['install_token' => 'rahasia-token'], [], [], [], '198.51.100.7');
         self::assertSame(422, $c->submit($req($this->installBody('pendek')))->status);
         self::assertFileDoesNotExist($this->lock);
         self::assertSame(422, $c->submit($req(['password2' => 'beda'] + $this->installBody()))->status);
-        putenv('BSSO_INSTALL_TOKEN=rahasia-token');
-        self::assertSame(403, $c->submit($req($this->installBody()))->status);
-        self::assertFileDoesNotExist($this->lock);
-        self::assertSame(200, $c->submit($req($this->installBody() + ['install_token' => 'rahasia-token']))->status);
+        self::assertSame(200, $c->submit($req($this->installBody()))->status);
         self::assertFileExists($this->lock);
     }
 }
