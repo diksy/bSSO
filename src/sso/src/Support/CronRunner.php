@@ -52,11 +52,6 @@ final class CronRunner
     {
         try {
             return $fn();
-        } catch (\LogicException $e) {
-            // Stub kontrak yang belum diisi modul pemiliknya (Gc: T11).
-            $this->logger->exception($e);
-
-            return 'dilewati';
         } catch (\Throwable $e) {
             $this->logger->exception($e);
 

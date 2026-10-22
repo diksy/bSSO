@@ -121,10 +121,12 @@ final class KeyManager
     }
 
     /** Rotasi paksa (admin): tanpa kunci next → buat next; dengan next → promosikan. Darurat → kunci baru aktif, lainnya retired. */
-    public function rotate(bool $emergency = false): RotationResult
+    /** @param array<string,mixed> $context tambahan untuk audit rotasi darurat (mis. 'before') */
+    public function rotate(bool $emergency = false, ?int $actorId = null, array $context = []): RotationResult
     {
         $result = $this->db->transaction(function () use ($emergency): array {
             $now = $this->clock->now();
+            $this->settings->lock('lock.signing_keys', $now);
             $live = $this->keys->listLiveForUpdate();
             $actions = [];
             $delete = [];
@@ -162,7 +164,7 @@ final class KeyManager
         [$actions, $activeKid, $nextKid, $delete] = $result;
         $this->afterChange($delete);
         if ($emergency) {
-            $this->audit->record('key.emergency_rotation', null, null, null, ['kid' => $activeKid]);
+            $this->audit->record('key.emergency_rotation', $actorId, null, null, $context + ['kid' => $activeKid]);
         }
 
         return new RotationResult($actions, $activeKid, $nextKid);
@@ -177,6 +179,7 @@ final class KeyManager
         /** @var array{0: list<string>, 1: ?string, 2: ?string, 3: list<string>} $r */
         $r = $this->db->transaction(function () use ($rotation, $overlap): array {
             $now = $this->clock->now();
+            $this->settings->lock('lock.signing_keys', $now);
             $live = $this->keys->listLiveForUpdate();
             $actions = [];
             $delete = [];

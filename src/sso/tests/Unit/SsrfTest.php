@@ -36,7 +36,7 @@ final class SsrfTest extends TestCase
         $urls = [
             'http://public.example.test/bcl', 'https://127.0.0.1/bcl', 'https://169.254.169.254/latest/meta-data',
             'https://10.1.2.3/x', 'https://172.16.0.1/', 'https://192.168.1.1/', 'https://0.0.0.0/', 'https://[::1]/',
-            'https://[::ffff:127.0.0.1]/', 'https://[fd00::1]/', 'https://localhost/', 'https://foo.localhost/',
+            'https://[::ffff:127.0.0.1]/', 'https://[::2]/', 'https://[fd00::1]/', 'https://localhost/', 'https://foo.localhost/',
             'https://2130706433/', 'https://0x7f.0.0.1/', 'https://user:pw@public.example.test/', 'https://public.example.test:8443/',
             'https://loopback.example.test/', 'https://meta.example.test/', 'https://ten.example.test/', 'https://mixed.example.test/',
             'https://v6loop.example.test/', 'https://mapped.example.test/', 'https://ula.example.test/', 'https://linklocal6.example.test/',

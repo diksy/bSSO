@@ -48,7 +48,11 @@ final class ClientCreator
         if (!in_array($type, ['confidential', 'public'], true)) {
             throw new \InvalidArgumentException('type harus confidential atau public');
         }
-        if ($redirectUris === []) {
+        $grants ??= $type === 'confidential'
+            ? ['authorization_code', 'refresh_token', 'client_credentials']
+            : ['authorization_code', 'refresh_token'];
+        // Selaras dengan form admin: redirect hanya wajib bila authorization_code diizinkan (client_credentials murni tanpa redirect).
+        if ($redirectUris === [] && in_array('authorization_code', $grants, true)) {
             throw new \InvalidArgumentException('Minimal satu redirect URI');
         }
         foreach ([...$redirectUris, ...$postLogoutUris] as $uri) {
@@ -57,9 +61,6 @@ final class ClientCreator
         if ($backchannelUri !== null && !str_starts_with($backchannelUri, 'https://')) {
             throw new \InvalidArgumentException('backchannel_logout_uri harus https');
         }
-        $grants ??= $type === 'confidential'
-            ? ['authorization_code', 'refresh_token', 'client_credentials']
-            : ['authorization_code', 'refresh_token'];
         foreach ($grants as $g) {
             if (!in_array($g, ['authorization_code', 'refresh_token', 'client_credentials'], true)) {
                 throw new \InvalidArgumentException('Grant tidak dikenal: ' . $g);

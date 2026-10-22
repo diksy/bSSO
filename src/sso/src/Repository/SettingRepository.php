@@ -47,6 +47,24 @@ final class SettingRepository
             ->execute([$json, $updatedBy, Db::fmt($at), $name]);
     }
 
+    /**
+     * Kunci baris sentinel (dibuat bila belum ada) sampai transaksi selesai: serialisasi proses serentak
+     * ketika belum ada baris data yang bisa dikunci. Hanya di dalam transaction().
+     */
+    public function lock(string $name, \DateTimeImmutable $at): void
+    {
+        try {
+            $this->db->pdo()
+                ->prepare('INSERT INTO settings (name, value, updated_by, updated_at) VALUES (?, ?, NULL, ?)')
+                ->execute([$name, '0', Db::fmt($at)]);
+        } catch (\PDOException) {
+            // baris sudah ada (atau dibuat proses lain): lanjut ke SELECT ... FOR UPDATE
+        }
+        $this->db->pdo()
+            ->prepare('SELECT name FROM settings WHERE name = ?' . ($this->db->isMysql() ? ' FOR UPDATE' : ''))
+            ->execute([$name]);
+    }
+
     /** Nilai bilangan bulat dengan nilai bawaan. */
     public function int(string $name, int $default): int
     {

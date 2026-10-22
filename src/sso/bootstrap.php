@@ -91,7 +91,7 @@ $container->set(
         (bool) (($c->get('config.app'))['debug'] ?? false),
     ),
 );
-$container->set(Gc::class, static fn (): Gc => new Gc());
+$container->set(Gc::class, static fn (Container $c): Gc => new Gc($c->get(Database::class), $c->get(Clock::class)));
 $container->set(UrlAllowlist::class, static fn (): UrlAllowlist => new UrlAllowlist());
 $container->set(HttpClient::class, static fn (Container $c): HttpClient => new HttpClient($c->get(UrlAllowlist::class)));
 $container->set(

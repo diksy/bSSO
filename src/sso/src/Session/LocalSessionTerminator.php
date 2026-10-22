@@ -19,6 +19,10 @@ final class LocalSessionTerminator implements SessionTerminator
         $this->sessions->revoke($sid, $this->clock->now());
     }
 
+    public function deferDispatch(): void
+    {
+    }
+
     public function endAllForUser(int $userId, ?string $exceptSid, string $reason): void
     {
         $this->sessions->revokeAllForUser($userId, $exceptSid, $this->clock->now());

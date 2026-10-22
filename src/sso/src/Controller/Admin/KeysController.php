@@ -57,8 +57,7 @@ final class KeysController
             return Response::redirect('/admin/keys', 303);
         }
         $before = $this->state();
-        $result = $this->manager->rotate(true);
-        $this->audit->record('key.rotate_emergency', $actor->id, null, null, ['before' => $before, 'after' => $this->after($result)]);
+        $this->manager->rotate(true, $actor->id, ['before' => $before]);
         Flash::add('ok', 'Rotasi darurat selesai; token lama tidak lagi diterima.');
 
         return Response::redirect('/admin/keys', 303);

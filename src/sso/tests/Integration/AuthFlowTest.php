@@ -394,6 +394,28 @@ final class AuthFlowTest extends TestCase
         self::assertSame(429, $this->register()->submit($this->post('/register', ['email' => 'a@example.test', 'name' => 'X', 'password' => self::PW]))->status);
     }
 
+    public function testDaftarUlangPendingDibatasiKirimEmailDanTidakMemakaiKuotaIpLogin(): void
+    {
+        $body = ['email' => 'pending@example.test', 'name' => 'P', 'password' => self::PW];
+        for ($i = 0; $i < 5; $i++) {
+            self::assertSame(200, $this->register()->submit($this->post('/register', $body))->status, 'respons sama');
+        }
+        self::assertCount(4, $this->s->mailer->sent, '1 pendaftaran + maks. 3 kirim ulang per jam per alamat');
+        // pendaftaran dan lupa-sandi dari satu IP tidak menghabiskan kuota gagal-login per IP (20)
+        self::assertFalse($this->s->limiter->loginBlocked('x@example.test', '203.0.113.9'));
+        for ($i = 0; $i < 6; $i++) {
+            $this->s->limiter->strike('register:203.0.113.9');
+            $this->s->limiter->strike('forgot:a' . $i . '@example.test');
+        }
+        for ($i = 0; $i < 19; $i++) {
+            $this->s->limiter->record('y' . $i . '@example.test', '203.0.113.9', false);
+        }
+        self::assertFalse($this->s->limiter->loginBlocked('z@example.test', '203.0.113.9'));
+        $this->s->clock->advance('+61 minutes');
+        $this->register()->submit($this->post('/register', $body));
+        self::assertCount(5, $this->s->mailer->sent);
+    }
+
     private function reset(): PasswordResetController
     {
         $s = $this->s;

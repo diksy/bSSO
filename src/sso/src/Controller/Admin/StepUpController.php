@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Admin\AdminIdle;
 use App\Admin\PendingActionStore;
 use App\Http\HttpException;
 use App\Http\Kernel;
@@ -18,6 +19,7 @@ use App\Repository\UserRepository;
 use App\Security\Crypto;
 use App\Security\RateLimiter;
 use App\Security\Totp;
+use App\Session\SessionTerminator;
 use App\Session\SsoSessionManager;
 use App\Support\Audit;
 
@@ -41,6 +43,8 @@ final class StepUpController
         private readonly Audit $audit,
         private readonly Kernel $kernel,
         private readonly Router $router,
+        private readonly AdminIdle $idle,
+        private readonly SessionTerminator $terminator,
     ) {
     }
 
@@ -48,6 +52,9 @@ final class StepUpController
     {
         $user = $this->page->actor($request);
         $role = $this->roles->findByUserId($user->id)->role ?? throw new HttpException(403);
+        if ($this->idle->isMarkedIdle($this->page->session($request))) {
+            return $this->forceLogin($request, $user->id);
+        }
         if ($user->mfaEnabledAt === null) {
             return Response::redirect('/account/mfa');
         }
@@ -60,6 +67,9 @@ final class StepUpController
         $user = $this->page->actor($request);
         $session = $this->page->session($request);
         $role = $this->roles->findByUserId($user->id)->role ?? throw new HttpException(403);
+        if ($this->idle->isMarkedIdle($session)) {
+            return $this->forceLogin($request, $user->id);
+        }
         if ($user->mfaEnabledAt === null || $user->mfaSecretEnc === null) {
             return Response::redirect('/account/mfa', 303);
         }
@@ -78,6 +88,7 @@ final class StepUpController
 
         $action = $this->pending->take($session); // sekali pakai: sudah dihapus dari sesi UI
         $cookie = $this->sessions->markMfaPassed($session);
+        $this->idle->markActive($session);
         $this->audit->record('stepup.success', $user->id, $user->id, null, $action === null ? [] : ['path' => $action['path']]);
 
         if ($action === null || !$this->replayable($action['method'], $action['path'])) {
@@ -95,6 +106,16 @@ final class StepUpController
         );
 
         return $this->kernel->handle($replay)->withCookie($cookie);
+    }
+
+    /** Admin idle melewati batas lalu membuka /admin/stepup: sesi dicabut (tidak boleh menghidupkan lagi lewat MFA). */
+    private function forceLogin(Request $request, int $userId): Response
+    {
+        $session = $this->page->session($request);
+        $this->terminator->endSession($session->sid, 'admin_idle');
+        $this->audit->record('admin.idle_logout', $userId, $userId);
+
+        return Response::redirect('/login', 303)->withCookie($this->sessions->clearCookie());
     }
 
     /** Hanya rute POST /admin/* yang benar-benar dipasangi RequireRecentAuth yang boleh dijalankan ulang. */

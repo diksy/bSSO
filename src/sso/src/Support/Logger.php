@@ -19,7 +19,8 @@ final class Logger
     /** Hanya kelas, lokasi, dan pesan singkat (tanpa trace/argumen). */
     public function exception(\Throwable $e): void
     {
-        $message = preg_replace('/[\r\n]+/', ' ', $e->getMessage()) ?? '';
+        // Samarkan SEBELUM dipotong: pemotongan di tengah rahasia bisa membuatnya lolos dari pola.
+        $message = self::redact(preg_replace('/[\r\n]+/', ' ', $e->getMessage()) ?? '');
         $this->write('ERROR', sprintf('%s di %s:%d: %s', $e::class, basename($e->getFile()), $e->getLine(), mb_substr($message, 0, 300)));
     }
 

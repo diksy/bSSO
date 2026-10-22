@@ -101,7 +101,7 @@ final class AdminManageTest extends TestCase
         $c->set(Mailer::class, $s->mailer);
         $c->set(Urls::class, $s->urls);
         $c->set(InstallGuard::class, new InstallGuard($s->roles, $this->lock));
-        $c->set(Gc::class, new Gc());
+        $c->set(Gc::class, new Gc($s->db, $s->clock));
         $c->set(UserRepository::class, $s->users);
         $c->set(SsoSessionRepository::class, $s->sessions);
         $c->set(AdminRoleRepository::class, $s->roles);
@@ -796,10 +796,10 @@ final class AdminManageTest extends TestCase
         $active = $keys->findActive()?->kid;
         $res = $this->call('POST', '/admin/keys/rotate-emergency', $this->freshCookie($u), ['confirm' => 'rotate']);
         self::assertSame($active, $keys->findActive()?->kid, 'tanpa kata ROTATE tidak berjalan');
-        self::assertSame(0, $this->auditCount('key.rotate_emergency'));
+        self::assertSame(0, $this->auditCount('key.emergency_rotation'));
         $this->call('POST', '/admin/keys/rotate-emergency', $this->freshCookie($u), ['confirm' => 'ROTATE']);
         self::assertNotSame($active, $keys->findActive()?->kid);
-        self::assertSame(1, $this->auditCount('key.rotate_emergency'));
+        self::assertSame(1, $this->auditCount('key.emergency_rotation'));
         self::assertStringNotContainsString('BEGIN', $this->allAudit());
         self::assertSame(200, $this->call('GET', '/admin/keys', $this->freshCookie($u))->status);
         self::assertSame($res->status, 303);
@@ -836,12 +836,13 @@ final class AdminManageTest extends TestCase
         self::assertSame(0, $this->auditCount('key.rotate_scheduled'));
     }
 
-    public function testGcStubTidakMenjadi500(): void
+    public function testGcBerjalanDanDiaudit(): void
     {
         [, $op] = $this->admin('operator');
         $res = $this->call('POST', '/admin/maintenance/gc', $op);
         self::assertSame(303, $res->status);
-        self::assertStringContainsString('belum tersedia', (string) json_encode($_SESSION['flash']));
+        self::assertStringContainsString('GC selesai', (string) json_encode($_SESSION['flash']));
+        self::assertSame(1, $this->auditCount('maintenance.gc'));
     }
 
     public function testRetryLogoutMenghidupkanYangGagal(): void

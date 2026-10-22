@@ -19,6 +19,7 @@ use App\Security\Totp;
 use App\Session\SsoSessionManager;
 use App\Support\Audit;
 use App\Support\Clock;
+use App\Support\Flash;
 use App\Support\SafePath;
 use App\Support\UiSession;
 use App\Support\View;
@@ -66,22 +67,22 @@ final class MfaController
             return Response::redirect('/login', 303);
         }
         $key = 'mfa:' . $user->id;
-        if ($this->limiter->blocked($key)) {
-            return $this->render('Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
-        }
         $code = trim((string) $request->input('code', ''));
         if ($code === '' || strlen($code) > 32) {
             return $this->render(self::GENERIC, 422);
         }
 
+        $attempt = $this->limiter->begin($key, $request->ip());
+        if ($attempt === null) {
+            return $this->render('Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
+        }
         $method = $this->check($user, $code);
         if ($method === null) {
-            $this->limiter->record($key, $request->ip(), false);
             $this->audit->record('mfa.failure', $user->id, $user->id, null, ['stage' => 'login']);
 
             return $this->render(self::GENERIC, 401);
         }
-        $this->limiter->record($key, $request->ip(), true);
+        $this->limiter->markSuccess($attempt);
 
         UiSession::forget('pre_mfa');
         UiSession::regenerate();
@@ -95,6 +96,7 @@ final class MfaController
             } catch (FederationException) {
                 // Login tetap berlanjut; tautan ditolak (mis. identitas sudah milik akun lain) dan dicatat di audit.
                 $this->audit->record('federation.link_failed', $user->id, $user->id);
+                Flash::add('warn', 'Login berhasil, tetapi akun penyedia tidak dapat ditautkan ke akun Anda. Hubungi admin bila perlu.');
             }
         }
         $cookie = $this->sessions->start($user->id, $pre['method'], true, $request, $pre['remember']);

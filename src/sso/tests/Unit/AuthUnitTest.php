@@ -140,16 +140,23 @@ final class AuthUnitTest extends TestCase
         $c->create('lain@example.test', 'Lain', 'password-panjang-1');
     }
 
-    public function testRateLimiterTokenDanRequestIp(): void
+    public function testRateLimiterEndpointKlienPerKlienIpDanPerIp(): void
     {
         $s = new Stack();
         for ($i = 0; $i < 60; $i++) {
-            self::assertTrue($s->limiter->tokenAllowed('klien-a'));
+            self::assertTrue($s->limiter->clientEndpointAllowed('token', 'klien-a', '198.51.100.1', 60, 120));
         }
-        self::assertFalse($s->limiter->tokenAllowed('klien-a'));
-        self::assertTrue($s->limiter->tokenAllowed('klien-b'));
+        self::assertFalse($s->limiter->clientEndpointAllowed('token', 'klien-a', '198.51.100.1', 60, 120));
+        // penyerang dari IP lain tidak menghabiskan kuota klien sah
+        self::assertTrue($s->limiter->clientEndpointAllowed('token', 'klien-a', '203.0.113.5', 60, 120));
+        self::assertTrue($s->limiter->clientEndpointAllowed('token', 'klien-b', '198.51.100.1', 60, 120));
+        // batas per IP lintas klien
+        for ($i = 0; $i < 120; $i++) {
+            $s->limiter->clientEndpointAllowed('introspect', 'k' . $i, '192.0.2.9', 60, 100);
+        }
+        self::assertFalse($s->limiter->clientEndpointAllowed('introspect', 'baru', '192.0.2.9', 60, 100));
         $s->clock->advance('+61 seconds');
-        self::assertTrue($s->limiter->tokenAllowed('klien-a'));
+        self::assertTrue($s->limiter->clientEndpointAllowed('token', 'klien-a', '198.51.100.1', 60, 120));
         self::assertSame('198.51.100.7', (new Request('GET', '/', remoteAddr: '198.51.100.7'))->ip());
     }
 }

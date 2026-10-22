@@ -251,6 +251,21 @@ final class FederationTest extends TestCase
         self::assertCount(1, $this->f->identities->listForUser($user->id));
     }
 
+    public function testTautanGagalSetelahMfaMemberiTahuUser(): void
+    {
+        [$user, $secret] = $this->mfaUser();
+        $this->f->oidcLogin('untrusted');
+        $this->f->fed->confirmSubmit($this->f->req('POST', '/x', 'untrusted', [], ['password' => 'kata-sandi-panjang-1']));
+        $other = $this->f->makeUser('lain@example.test');
+        $this->f->identities->create($other->id, 2, 'idp-user-1', null, false, null, $this->f->s->clock->now());
+        \App\Support\Flash::pull();
+
+        $ok = $this->f->mfa->submit($this->f->req('POST', '/login/mfa', 'x', [], ['code' => $this->totpNow($secret)]));
+        self::assertNotNull($this->f->cookieOf($ok), 'login tetap berlanjut');
+        self::assertSame([], $this->f->identities->listForUser($user->id));
+        self::assertStringContainsString('tidak dapat ditautkan', (string) json_encode(\App\Support\Flash::pull()));
+    }
+
     // ---- state ----
 
     public function testStateSalahDitolak(): void
@@ -475,6 +490,7 @@ final class FederationTest extends TestCase
         $token = $this->f->s->mailer->lastToken();
         self::assertSame(64, strlen($token));
         self::assertSame('baru@example.test', $this->f->s->mailer->sent[0]['to']);
+        self::assertStringContainsString('Fakeoauth', $this->f->s->mailer->sent[0]['text'], 'email menyebut nama provider');
 
         $verify = $this->f->fed->verifyEmail($this->f->req('GET', '/x', 'fakeoauth', ['token' => $token]));
         self::assertSame('/login', $this->loc($verify));

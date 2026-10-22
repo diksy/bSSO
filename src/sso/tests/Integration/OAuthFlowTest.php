@@ -791,6 +791,13 @@ final class OAuthFlowTest extends TestCase
         $r = $creator->create('Dev', 'confidential', ['http://localhost:3000/cb'], ['https://a.example/bye']);
         self::assertCount(1, $this->uris->listForClient($r['client']->id, 'post_logout'));
         self::assertNull($creator->create('Pub', 'public', ['https://p.example/cb'])['secret']);
+        self::assertNotNull($creator->create('M2M', 'confidential', [], [], ['client_credentials'])['secret'], 'client_credentials tanpa redirect');
+        try {
+            $creator->create('Web', 'confidential', [], [], ['authorization_code']);
+            self::fail('authorization_code wajib redirect');
+        } catch (\InvalidArgumentException) {
+            self::addToAssertionCount(1);
+        }
         $this->expectException(\InvalidArgumentException::class);
         $creator->create('Pub', 'public', ['https://p.example/cb'], [], ['client_credentials']);
     }

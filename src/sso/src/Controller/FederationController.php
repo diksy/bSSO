@@ -336,7 +336,7 @@ final class FederationController
                 $this->clock->now()->modify('+' . self::EMAIL_TTL . ' seconds'),
             );
             $link = $this->urls->abs('/federation/' . rawurlencode($slug) . '/verify-email?token=' . $token);
-            $this->send($email, 'Verifikasi email BikininSSO', "Buka tautan berikut untuk memverifikasi email dan mengaktifkan akun Anda (berlaku 24 jam):\n\n" . $link . "\n\nAbaikan email ini jika Anda tidak memintanya.");
+            $this->send($email, 'Verifikasi email BikininSSO', "Seseorang (mungkin Anda) masuk dengan akun {$config->displayName} dan memakai email ini. Buka tautan berikut hanya jika Anda memang memulai proses itu dengan akun {$config->displayName} milik Anda, untuk memverifikasi email dan mengaktifkan akun (berlaku 24 jam):\n\n" . $link . "\n\nAbaikan email ini jika Anda tidak memintanya.");
             $this->audit->record('federation.email_requested', null, null, null, ['provider' => $slug]);
         }
         UiSession::forget('fed_email');
