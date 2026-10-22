@@ -22,10 +22,10 @@ Tinjauan manual awal: oauth-flow, federasi, admin + step-up, logout/SSRF, `/inst
 | S2 | A07 | `src/sso/src/Controller/LoginController.php:60-63,80`; `FederationController.php:256-266` | sedang | Race cek-lalu-catat pada login & konfirmasi tautan federasi. | `begin()` atomik + `markSuccess()`. | **diperbaiki** (T13): dicatat gagal sebelum verifikasi Argon2 (`RateLimiter.php:54-65`, `> 5` setelah insert); sukses hanya setelah cocok. Sisa IP = S6. |
 | S3 | A07 | `StepUpController.php:77-87`; `MfaSetupController.php:75-87,148-157`; `PasswordController.php:57-67` | rendah | Race sama pada TOTP step-up, MFA on/off, cek password lama. | Samakan dengan `begin()`. | **diperbaiki** (T13): ketiganya `begin()` sebelum verifikasi, `markSuccess()` hanya setelah lolos. |
 | S4 | A04 / A07 | `src/sso/src/Security/RateLimiter.php:21-27` | rendah | Kunci per email global → akun korban bisa dikunci terus (DoS login). | Email+IP + batas global longgar, atau jeda progresif. | terbuka (diterima) |
-| S5 | A05 | `src/sso/src/Http/Request.php:76-79`; `src/public_html/.htaccess:5-7` | rendah | `ip()` hanya `REMOTE_ADDR`; di balik proxy batas per IP global & IP audit salah. | Daftar proxy tepercaya (`mod_remoteip`/`trusted_proxies`). | terbuka (diterima) |
+| S5 | A05 | `src/sso/src/Http/Request.php:76-79`; `src/public_html/.htaccess:5-7` | rendah (DIPERBAIKI T15) | `ip()` hanya `REMOTE_ADDR`; di balik proxy batas per IP global & IP audit salah. | Daftar proxy tepercaya (`mod_remoteip`/`trusted_proxies`). | diperbaiki: set `trusted_proxies` di config/app.php bila di belakang proxy |
 | S6 | A07 | `LoginController.php:56`; `RateLimiter.php:21-27` | rendah (DIPERBAIKI T14) | Batas per IP (20/15 mnt) masih cek-lalu-catat; paralel ke banyak email bisa > 20 (spraying sesaat). Batas per email tetap atomik (5). | Cek IP setelah insert di `begin()`. | terbuka (non-blocking) |
 
-Ringkasan status terbuka: kritis 0 · tinggi 0 · sedang 0 · rendah 2 (S4, S5). Diperbaiki: S1, S2, S3, S6 (T14).
+Ringkasan status terbuka: kritis 0 · tinggi 0 · sedang 0 · rendah 1 (S4). Diperbaiki: S1, S2, S3, S5 (T15, wajib diset di deploy berproxy), S6 (T14).
 
 ## 3. False positive (terverifikasi di kode)
 - semgrep `unlink-use` ×5: `InstallGuard.php:52`, `ProviderContext.php:176`, `KeyManager.php:259,285,317` — path konstanta/`tempnam`/kid tervalidasi, tanpa input pengguna.
@@ -50,5 +50,5 @@ Agen security terhalang `guard-bash.sh` (regex docker `ghcr.io/zaproxy/...`, fla
 ## 6. Tindak lanjut
 1. Opsional: perbaiki regex `guard-bash.sh` (image `ghcr.io/zaproxy/zaproxy:stable`, `--network host -v`) agar agen security bisa memindai sendiri; jalankan ZAP authenticated scan di staging HTTPS.
 2. S6 selesai (T14, `RateLimiter::beginIp()`); tes konkurensi IP belum ada di suite.
-3. S4/S5 diterima sebagai risiko rendah; tinjau ulang jika di balik proxy/CDN.
+3. S4 diterima sebagai risiko rendah. S5: isi `trusted_proxies` bila di belakang proxy/CDN (DEPLOY.md bagian 2a).
 4. Tambahkan tes konkurensi limiter ke suite Integration (butuh MariaDB; skrip uji ad hoc sudah lulus).

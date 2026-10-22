@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Http\ClientIp;
 use App\Repository\AuditLogRepository;
 
 final class Audit
@@ -14,6 +15,8 @@ final class Audit
         private readonly AuditLogRepository $logs,
         private readonly Clock $clock,
         private readonly ?string $ip = null,
+        /** @var array<mixed> */
+        private readonly array $trustedProxies = [],
     ) {
     }
 
@@ -51,6 +54,6 @@ final class Audit
 
     private function ip(): ?string
     {
-        return $this->ip ?? (PHP_SAPI === 'cli' ? null : (is_string($_SERVER['REMOTE_ADDR'] ?? null) ? $_SERVER['REMOTE_ADDR'] : null));
+        return $this->ip ?? (PHP_SAPI === 'cli' ? null : ClientIp::resolve($_SERVER, $this->trustedProxies));
     }
 }

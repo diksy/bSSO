@@ -184,7 +184,12 @@ $container->set(
 );
 $container->set(
     Audit::class,
-    static fn (Container $c): Audit => new Audit($c->get(AuditLogRepository::class), $c->get(Clock::class)),
+    static fn (Container $c): Audit => new Audit(
+        $c->get(AuditLogRepository::class),
+        $c->get(Clock::class),
+        null,
+        (array) (($c->get('config.app'))['trusted_proxies'] ?? []),
+    ),
 );
 $container->set(Urls::class, static fn (Container $c): Urls => new Urls((string) (($c->get('config.app'))['base_url'] ?? '')));
 

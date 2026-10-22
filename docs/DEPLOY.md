@@ -22,6 +22,14 @@ Salin tiga berkas contoh di `sso/config/` (rujuk `*.example.php`), jangan di-com
 
 Izin: `chmod 600 config/secrets.php config/database.php config/app.php`. Isi `secrets.php` tidak boleh masuk repo, tiket, atau log.
 
+### 2a. Proxy tepercaya (`trusted_proxies`)
+
+IP klien dipakai untuk rate limit dan audit. Default `[]`: hanya `REMOTE_ADDR`, header `X-Forwarded-For` (XFF) diabaikan. Isi hanya bila aplikasi berada di belakang proxy/CDN; jika tidak, klien bisa memalsukan XFF. Daftar berisi IP atau CIDR (IPv4/IPv6); entri tidak valid diabaikan. XFF dipakai hanya bila `REMOTE_ADDR` ada di daftar; dibaca dari kanan, hop tepercaya dilewati, alamat valid pertama yang bukan proxy dipakai; XFF rusak kembali ke `REMOTE_ADDR`. `X-Real-IP` tidak dipakai.
+
+- cPanel tanpa proxy: biarkan `[]`.
+- Reverse proxy sendiri (nginx/Apache di host yang sama): `['127.0.0.1', '::1']`; nginx wajib `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`.
+- Cloudflare: isi seluruh rentang di https://www.cloudflare.com/ips/ (mis. `'173.245.48.0/20'`, `'2400:cb00::/32'`), dan pastikan origin hanya menerima trafik dari rentang itu.
+
 ## 3. Izin direktori
 
 - `keys/` (private key RS256, dibuat otomatis oleh `KeyManager`): direktori `700`, berkas kunci `600`. Pemilik = user PHP/akun hosting. Verifikasi: `ls -ld keys; ls -l keys`.
