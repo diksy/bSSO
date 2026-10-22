@@ -1,48 +1,51 @@
 <!-- maks 80 baris -->
-# Laporan Keamanan – BikininSSO (`src/`, branch main @ 66e924c)
+# Laporan Keamanan – BikininSSO (`src/`, branch main @ 4ec9133)
 
-Tanggal: 2026-10-22 · Pemilik: security · Rujukan threat model: `docs/architecture.md` §4.
+Tanggal: 2026-10-22 (pemindaian ulang setelah T12/T13) · Pemilik: security · Rujukan threat model: `docs/architecture.md` §4.
 
 ## 1. Cakupan dan pemindai
 | Pemindai | Hasil |
 | --- | --- |
-| semgrep `--config auto` (227 berkas, tanpa `vendor/`, `tests/`) | 8 temuan, semuanya false positive (lihat §3) |
+| semgrep `--config auto` (awal: 227 berkas @ 66e924c) | 8 temuan, semuanya false positive (§3) |
+| semgrep ulang (8 berkas T12/T13: `InstallController`, `InstallGuard`, `LoginController`, `FederationController`, `Admin/StepUpController`, `Account/MfaSetupController`, `Account/PasswordController`, `RateLimiter`) | 1 temuan: `unlink-use` di `InstallGuard.php:52`, false positive yang sudah dikenal |
 | `composer audit` (`src/sso`) | 0 advisory |
-| gitleaks detect (riwayat git, 14 commit) | 0 kebocoran |
-| gitleaks detect `--no-git` (working tree) | 0 kebocoran |
-| OWASP ZAP baseline (DAST) | **DILEWATI**: ZAP dan MariaDB tidak tersedia, tidak ada URL staging. Wajib dijalankan di staging sebelum rilis. |
+| gitleaks detect (riwayat git, 16 commit) dan `--no-git` (working tree) | 0 kebocoran |
+| OWASP ZAP baseline (DAST) | **BELUM DIJALANKAN**: ZAP dan MariaDB tidak tersedia, tidak ada URL staging. Wajib di staging sebelum rilis. |
 
-Tinjauan manual terarah: oauth-flow, federasi, admin + step-up, logout/SSRF, `/install`, sesi/cookie, CSRF, header keamanan, upload `.p8`, rate limit, escaping view.
+Tinjauan manual awal: oauth-flow, federasi, admin + step-up, logout/SSRF, `/install`, sesi/cookie, CSRF, header, upload `.p8`, rate limit, escaping view. Tinjauan ulang dibatasi pada S1–S3.
 
 ## 2. Temuan
 | ID | OWASP | Lokasi | Risiko | Temuan | Rekomendasi | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| S1 | A05 Security Misconfiguration / A07 | `src/sso/src/Controller/InstallController.php:42-45`, `src/sso/src/Admin/InstallGuard.php:20-23` | tinggi | Bila `BSSO_INSTALL_TOKEN` kosong/tidak diset, `/install` terbuka untuk siapa pun selama `admin_roles` kosong dan `install.lock` belum ada. Orang pertama yang mencapai URL (pemindai otomatis memburu `/install`) menjadi **superadmin**. Jendela sama terbuka lagi bila DB dibuat ulang dan `install.lock` terhapus. | Fail-closed: token kosong → 404 (atau hanya `bin/create-admin.php` via CLI). Wajibkan token acak ≥32 karakter, bandingkan dengan `hash_equals` (sudah ada). Sebutkan di `DEPLOY.md`. | terbuka |
-| S2 | A07 Identification & Auth Failures | `src/sso/src/Controller/LoginController.php:56,63,66`; `src/sso/src/Controller/FederationController.php:256,260-261` | sedang | Pembatas login berpola cek-lalu-catat (`loginBlocked()` → verifikasi Argon2 → `record()`). Request paralel lolos pengecekan sebelum kegagalan pertama tercatat; verifikasi Argon2 yang lambat memperlebar jendela race sehingga batas 5/email dan 20/IP per 15 menit bisa dilampaui berkali lipat. Hal yang sama berlaku pada konfirmasi tautan federasi. | Pakai pola atomik `RateLimiter::begin()` + `markSuccess()` seperti `MfaController.php:75-85` (catat dulu, lalu hitung), untuk kunci email dan IP. | terbuka |
-| S3 | A07 | `src/sso/src/Controller/Admin/StepUpController.php:77,82`; `src/sso/src/Controller/Account/MfaSetupController.php:71,82,144,152`; `src/sso/src/Controller/Account/PasswordController.php:54,63` | rendah | Race yang sama pada TOTP step-up, TOTP aktif/nonaktif MFA, dan cek password lama. Tebakan paralel melampaui batas 5/15 menit. Butuh sesi yang sudah dicuri, padahal step-up justru lapisan pertahanan untuk skenario itu. | Samakan dengan `begin()` atomik. Tambahkan tes konkurensi. | terbuka |
-| S4 | A04 Insecure Design / A07 | `src/sso/src/Security/RateLimiter.php:21-27` | rendah | Penguncian per email bersifat global (5 gagal dari IP mana pun). Penyerang bisa terus mengunci akun korban, termasuk superadmin, tanpa batas (DoS login). | Kunci per pasangan email+IP ditambah batas email global yang lebih longgar, atau jeda progresif. Pertimbangkan pengecualian bagi login yang lolos dari IP/perangkat yang dikenal. | terbuka |
-| S5 | A05 | `src/sso/src/Http/Request.php:76-79`; `src/public_html/.htaccess:5-7` | rendah | `ip()` hanya memakai `REMOTE_ADDR`, sedangkan `.htaccess` mengasumsikan reverse proxy (`X-Forwarded-Proto`). Di balik proxy/CDN semua klien berbagi satu IP: batas per IP (login 20, `/token` 120/menit, `/install` 10) menjadi global (DoS), dan IP di audit/sesi menjadi salah. | Tambahkan daftar proxy tepercaya di config (`mod_remoteip` atau `trusted_proxies`). Baca `X-Forwarded-For` hanya dari IP itu. | terbuka |
+| S1 | A05 / A07 | `src/sso/src/Controller/InstallController.php:33-34,41-49,84-90` | tinggi | `/install` terbuka tanpa token, sehingga orang pertama yang mengaksesnya menjadi superadmin. | Fail-closed jika token kosong. | **diperbaiki** (T12): `requireEnabled()` mengembalikan 404 untuk GET dan POST jika `BSSO_INSTALL_TOKEN` kosong atau tidak diset. Token dibaca dari body/header (bukan query) dan dibandingkan dengan `hash_equals`. Token salah juga mendapat 404 yang seragam. Rate limit 10 tetap berlaku. |
+| S2 | A07 | `src/sso/src/Controller/LoginController.php:60-63,80`; `src/sso/src/Controller/FederationController.php:256-266` | sedang | Race cek-lalu-catat pada login dan konfirmasi tautan federasi. | `begin()` atomik + `markSuccess()`. | **diperbaiki** (T13): percobaan dicatat sebagai gagal sebelum verifikasi Argon2 (`RateLimiter.php:54-65`, kondisi `> 5` setelah insert). Sukses ditandai hanya setelah password cocok. Akun suspended tetap tercatat gagal. Sisa pada IP dicatat sebagai S6. |
+| S3 | A07 | `src/sso/src/Controller/Admin/StepUpController.php:77-87`; `src/sso/src/Controller/Account/MfaSetupController.php:75-87,148-157`; `src/sso/src/Controller/Account/PasswordController.php:57-67` | rendah | Race yang sama pada TOTP step-up, aktivasi/nonaktivasi MFA, dan cek password lama. | Samakan dengan `begin()`. | **diperbaiki** (T13): ketiga controller memanggil `begin()` sebelum verifikasi dan `markSuccess()` hanya setelah lolos. Tidak ditemukan jalur yang melewati limiter. |
+| S4 | A04 / A07 | `src/sso/src/Security/RateLimiter.php:21-27` | rendah | Penguncian per email bersifat global, sehingga akun korban (termasuk superadmin) bisa dikunci terus-menerus (DoS login). | Kunci email+IP ditambah batas global yang lebih longgar, atau jeda progresif. | terbuka (diterima) |
+| S5 | A05 | `src/sso/src/Http/Request.php:76-79`; `src/public_html/.htaccess:5-7` | rendah | `ip()` hanya memakai `REMOTE_ADDR`. Di balik proxy/CDN, batas per IP berlaku global dan IP di audit menjadi salah. | Tambahkan daftar proxy tepercaya (`mod_remoteip`/`trusted_proxies`). | terbuka (diterima) |
+| S6 | A07 | `src/sso/src/Controller/LoginController.php:56`; `src/sso/src/Security/RateLimiter.php:21-27` | rendah | Sisa S2: batas **per IP** (20/15 menit) masih memakai `loginBlocked()` yang bersifat cek-lalu-catat. Request paralel ke banyak email berbeda dari satu IP bisa melampaui 20 (password spraying sesaat). Batas per email tetap atomik (5). | Tambahkan pengecekan IP setelah insert di `begin()` (misalnya `countFailuresByIp() > IP_LIMIT` lalu hapus baris). | terbuka (baru, non-blocking) |
 
-Ringkasan: kritis 0 · tinggi 1 · sedang 1 · rendah 3.
+Ringkasan status terbuka: kritis 0 · tinggi 0 · sedang 0 · rendah 3 (S4, S5, S6). Diperbaiki: S1, S2, S3.
 
 ## 3. False positive dan penanda allowlist (sudah diverifikasi di kode)
-- semgrep `unlink-use` ×5: `InstallGuard.php:52` (path konstanta di `storage/`), `ProviderContext.php:176` (berkas `tempnam`), `KeyManager.php:259` (lewat `safePath()`: harus berada langsung di `keyDir` dan `.pem`), `KeyManager.php:285` dan `:317` (path buatan sendiri dari kid yang divalidasi regex). Tidak ada input pengguna.
-- semgrep `symfony-non-literal-redirect` ×3 di `AuthorizeController.php:62,75,98`: `redirect_uri` sudah dicocokkan persis dengan DB (`AuthorizeRequest.php:45`). URI tidak sah tidak pernah dipakai untuk redirect.
-- `gitleaks:allow` ×3, semuanya sah: `ProviderConfig.php:86` (regex header PEM, bukan kunci), `tests/Integration/AdminManageTest.php:543` (PEM rusak dummy), `tests/Unit/AuthUnitTest.php:93` (string dummy uji penyaringan log). `.gitleaks.toml` membatasi allowlist dengan `condition = "AND"` (path `panduan-integrasi.md` DAN pola `eyJ…`): sempit dan wajar.
+- semgrep `unlink-use` ×5: `InstallGuard.php:52` (path konstanta di `storage/`), `ProviderContext.php:176` (berkas `tempnam`), `KeyManager.php:259` (lewat `safePath()`), `KeyManager.php:285` dan `:317` (kid divalidasi regex). Tidak ada input pengguna.
+- semgrep `symfony-non-literal-redirect` ×3 di `AuthorizeController.php:62,75,98`: `redirect_uri` dicocokkan persis dengan DB (`AuthorizeRequest.php:45`).
+- `gitleaks:allow` ×3, semuanya sah: `ProviderConfig.php:86` (regex header PEM), `tests/Integration/AdminManageTest.php:543` (PEM dummy), `tests/Unit/AuthUnitTest.php:93` (string dummy). Allowlist `.gitleaks.toml` sempit (`condition = "AND"`).
 
-## 4. Kontrol yang terverifikasi baik (tanpa temuan)
-- OAuth: exact-match `redirect_uri`/`post_logout`, PKCE S256 wajib, code 60 detik sekali pakai dengan `FOR UPDATE`, reuse code/refresh → family dicabut (+ sesi), status user/sesi dicek saat redeem/rotate/userinfo, `alg` dipin RS256 + `kid` dikenal, `typ` dibedakan (`at+jwt`/`JWT`/`logout+jwt`).
-- Federasi: state 256-bit diikat ke sesi UI dan sekali pakai, nonce + PKCE, `iss`/`aud`/`azp`/`exp` dicek. Auto-link hanya bila `trust_email` + verified (Microsoft/Facebook/X dipaksa unverified, GitHub hanya primary+verified). User ber-MFA selalu melewati `/login/mfa`.
-- SSRF: `UrlAllowlist` (https:443, blokir IP privat/loopback/metadata/IPv4-mapped, sufiks internal) + IP disematkan (`CURLOPT_RESOLVE`), tanpa redirect, batas 1 MiB. Endpoint GitHub emails dipatok di kode.
-- Admin: matriks `AdminPolicy`, `canManageUser` (anti-eskalasi ke superadmin), superadmin terakhir dilindungi, step-up 5 menit dengan aksi tertunda terenkripsi yang terikat ke sid+uid dan hanya untuk rute ber-`RequireRecentAuth`, idle admin, redirect `back` hanya ke `/admin`.
-- `.p8`: ≤4096 byte, PEM PKCS#8 murni, EC P-256 divalidasi OpenSSL, disimpan terenkripsi, write-only.
-- Sesi/cookie: `__Host-`, Secure, HttpOnly, SameSite=Lax, hanya hash SHA-256 yang disimpan, id diganti setelah login/MFA/step-up, idle 8 jam / absolut 24 jam. CSRF per sesi UI dengan `hash_equals`.
-- Header: CSP `default-src 'none'` (tanpa script), `frame-ancestors 'none'`, HSTS, nosniff, `Referrer-Policy: no-referrer`, `no-store` sebagai bawaan. Semua output view memakai `e()`. Markdown di-escape dulu dan hanya mengizinkan tautan http(s).
+## 4. Catatan regresi pemindaian ulang (tanpa temuan baru selain S6)
+- Konkurensi `begin()`: insert lalu count (autocommit). Dua request serentak paling buruk sama-sama diblokir (fail-closed), tidak sama-sama lolos. Perilaku ini perlu dibuktikan pada MariaDB asli di staging (DB belum tersedia lokal).
+- Baris yang ditolak dihapus (`delete($rowId)`), sehingga percobaan yang diblokir tidak memperpanjang penguncian. Ini wajar.
+- Federasi: kunci `link:<id>` terpisah dari kunci email, sehingga per akun bisa ada 5 tebakan login + 5 tebakan tautan per 15 menit. Kegagalan tautan tetap ikut dihitung dalam kuota IP. Dapat diterima.
+- `/install`: `hit()` masih cek-lalu-catat, tetapi dampaknya rendah karena token wajib dan lock `fopen 'x'` bersifat atomik. Saran (non-blocking): tolak token yang lebih pendek dari 32 karakter saat startup dan sebutkan di `DEPLOY.md`.
 
-## 5. Penilaian `/install` saat `BSSO_INSTALL_TOKEN` kosong
-Saat ini fail-open (S1). Lock atomik (`fopen 'x'`) mencegah race antar-penginstal, tetapi tidak mencegah orang asing menjadi penginstal pertama. **Usul fail-closed**: tanpa token, `/install` mengembalikan 404 dan admin pertama dibuat lewat `bin/create-admin.php` (CLI, SSH). Dengan token, alur web tetap seperti sekarang. Pertahankan `install.lock` meskipun DB dikosongkan.
+## 5. Kontrol yang terverifikasi baik (dari pemindaian awal, tidak berubah)
+- OAuth: exact-match `redirect_uri`/`post_logout`, PKCE S256 wajib, code 60 detik sekali pakai (`FOR UPDATE`), reuse → family dicabut, `alg` dipin RS256 + `kid` dikenal, `typ` dibedakan.
+- Federasi: state 256-bit terikat sesi dan sekali pakai, nonce + PKCE, `iss`/`aud`/`azp`/`exp` dicek, auto-link hanya bila verified + `trust_email`, user ber-MFA melewati `/login/mfa`.
+- SSRF: `UrlAllowlist` + IP disematkan (`CURLOPT_RESOLVE`), tanpa redirect, batas 1 MiB.
+- Admin: `AdminPolicy`, anti-eskalasi, superadmin terakhir dilindungi, step-up 5 menit dengan aksi tertunda terenkripsi yang hanya berlaku untuk rute `RequireRecentAuth`.
+- Sesi/cookie `__Host-`, Secure, HttpOnly, SameSite=Lax, hash SHA-256, regenerasi setelah login/MFA/step-up. CSRF memakai `hash_equals`. CSP `default-src 'none'`, HSTS, nosniff, `no-store`. Semua view memakai `e()`.
 
 ## 6. Tindak lanjut
-1. Perbaiki S1 dan S2 sebelum rilis, lalu jalankan pemindaian ulang terbatas pada `InstallController`, `LoginController`, `FederationController`, dan `RateLimiter`.
-2. Jalankan ZAP baseline + authenticated scan di staging (DAST belum dilakukan).
-3. Tambahkan tes konkurensi limiter (S2/S3) ke suite Integration.
+1. Jalankan ZAP baseline + authenticated scan di **staging** dengan MariaDB (DAST dan tes konkurensi limiter pada DB asli belum dilakukan).
+2. S6: tambahkan pengecekan IP atomik di `begin()` (opsional sebelum rilis, non-blocking).
+3. S4/S5 diterima sebagai risiko rendah. Tinjau ulang jika aplikasi dipasang di balik proxy/CDN.
+4. Tambahkan tes konkurensi limiter ke suite Integration (jalankan pada MariaDB).
