@@ -56,6 +56,11 @@ final class LoginController
         if ($this->limiter->loginBlocked($email, $ip)) {
             return $this->render($next, $email, 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
         }
+        // Atomik: percobaan dicatat sebagai gagal sebelum diverifikasi; request serentak tak bisa melewati batas.
+        $attempt = $this->limiter->begin($email, $ip);
+        if ($attempt === null) {
+            return $this->render($next, $email, 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
+        }
 
         $user = $this->users->findByEmail($email);
         // Selalu menjalankan verifikasi (hash tiruan bila user tidak ada) agar waktu respons seragam.
@@ -63,22 +68,20 @@ final class LoginController
         $matches = $this->hasher->verify($password, $hash);
 
         if (!$matches || $user === null || $user->passwordHash === null) {
-            $this->limiter->record($email, $ip, false);
             $this->audit->record('login.failure', null, $user?->id);
 
             return $this->render($next, $email, self::GENERIC, 401);
         }
         if ($user->status === 'suspended') {
-            $this->limiter->record($email, $ip, false);
             $this->audit->record('login.suspended', null, $user->id);
 
             return $this->render($next, $email, self::GENERIC, 401);
         }
+        $this->limiter->markSuccess($attempt);
         if ($user->status !== 'active' || $user->emailVerifiedAt === null) {
             return $this->render($next, $email, 'Email belum diverifikasi. Buka tautan verifikasi yang dikirim ke email Anda.', 403);
         }
 
-        $this->limiter->record($email, $ip, true);
         if ($this->hasher->needsRehash($user->passwordHash)) {
             $this->users->updatePasswordHash($user->id, $this->hasher->hash($password));
         }

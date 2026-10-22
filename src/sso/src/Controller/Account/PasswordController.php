@@ -51,19 +51,20 @@ final class PasswordController
             $status,
         );
         $key = 'pwchange:' . $user->id;
-        if ($this->limiter->blocked($key)) {
-            return $fail('Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
-        }
         if ($user->passwordHash === null) {
             return $fail('Akun ini belum punya kata sandi. Gunakan "Lupa kata sandi" di halaman masuk untuk membuatnya.');
+        }
+        $attempt = $this->limiter->begin($key, $request->ip());
+        if ($attempt === null) {
+            return $fail('Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
         }
         $current = (string) $request->input('current', '');
         $new = (string) $request->input('new', '');
         if (strlen($current) > 1024 || !$this->hasher->verify($current, $user->passwordHash)) {
-            $this->limiter->record($key, $request->ip(), false);
 
             return $fail('Kata sandi saat ini salah.');
         }
+        $this->limiter->markSuccess($attempt);
         $policy = PasswordPolicy::check($new);
         if ($policy !== null) {
             return $fail($policy);
@@ -83,7 +84,6 @@ final class PasswordController
             $this->users->updatePasswordHash($user->id, $hash);
             $this->terminator->endAllForUser($user->id, $session->sid, 'password_change');
         });
-        $this->limiter->record($key, $request->ip(), true);
         $this->audit->record('account.password_change', $user->id, $user->id);
         Flash::add('ok', 'Kata sandi diganti. Sesi di perangkat lain telah diakhiri.');
 

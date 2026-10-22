@@ -74,17 +74,17 @@ final class StepUpController
             return Response::redirect('/account/mfa', 303);
         }
         $key = 'mfa:' . $user->id;
-        if ($this->limiter->blocked($key)) {
+        $attempt = $this->limiter->begin($key, $request->ip());
+        if ($attempt === null) {
             return $this->render($request, $role, 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
         }
         $code = trim((string) $request->input('code', ''));
         if (preg_match('/^\d{6}$/', preg_replace('/\s+/', '', $code) ?? '') !== 1 || !$this->verify($user, $code)) {
-            $this->limiter->record($key, $request->ip(), false);
             $this->audit->record('mfa.failure', $user->id, $user->id, null, ['stage' => 'stepup']);
 
             return $this->render($request, $role, self::GENERIC, 401);
         }
-        $this->limiter->record($key, $request->ip(), true);
+        $this->limiter->markSuccess($attempt);
 
         $action = $this->pending->take($session); // sekali pakai: sudah dihapus dari sesi UI
         $cookie = $this->sessions->markMfaPassed($session);

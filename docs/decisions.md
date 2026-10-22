@@ -36,3 +36,4 @@
 | 2026-10-22 | Facebook: `extra_config.graph_version` (bawaan v23.0, perlu diverifikasi dokumentasi Meta) menentukan URL authorize/token/userinfo yang ditulis ulang saat simpan | Versi Graph API eksplisit sesuai requirements §5 |
 | 2026-10-22 | "Paksa reset password" = kirim tautan reset (berlaku 1 jam) + cabut semua sesi; password lama tidak dihapus | Menghindari user terkunci bila email gagal; token terikat hash password sehingga sekali pakai |
 | 2026-10-22 | Redirect URI `http://localhost`/`127.0.0.1` hanya diterima saat `config/app.php debug=true`; produksi wajib https | Requirements: localhost hanya untuk dev |
+| 2026-10-22 | /install fail-closed: tanpa BSSO_INSTALL_TOKEN → 404; admin pertama via bin/create-admin.php (S1) | Disetujui pemilik via Telegram (✅ atas usulan security) |
