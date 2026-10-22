@@ -253,17 +253,17 @@ final class FederationController
         }
         $key = 'link:' . $target->id;
         $ip = $request->ip();
-        if ($this->limiter->blocked($key) || ($target->email !== null && $this->limiter->loginBlocked($target->email, $ip))) {
+        $attempt = ($target->email !== null && $this->limiter->loginBlocked($target->email, $ip)) ? null : $this->limiter->begin($key, $ip);
+        if ($attempt === null) {
             return $this->renderConfirm($config, $target, 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
         }
         $password = (string) $request->input('password', '');
         if (strlen($password) > 1024 || !$this->hasher->verify($password, $target->passwordHash)) {
-            $this->limiter->record($key, $ip, false);
             $this->audit->record('federation.confirm_failure', null, $target->id, null, ['provider' => $slug]);
 
             return $this->renderConfirm($config, $target, 'Kata sandi salah.', 401);
         }
-        $this->limiter->record($key, $ip, true);
+        $this->limiter->markSuccess($attempt);
 
         $profile = NormalizedProfile::fromArray((array) $flow['profile']);
         $next = SafePath::clean(is_string($flow['next'] ?? null) ? $flow['next'] : null);

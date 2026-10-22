@@ -159,4 +159,32 @@ final class AuthUnitTest extends TestCase
         self::assertTrue($s->limiter->clientEndpointAllowed('token', 'klien-a', '198.51.100.1', 60, 120));
         self::assertSame('198.51.100.7', (new Request('GET', '/', remoteAddr: '198.51.100.7'))->ip());
     }
+
+    public function testBeginAtomikHanyaSatuLolosPadaSisaKuotaSatu(): void
+    {
+        $s = new Stack();
+        for ($i = 0; $i < 4; $i++) {
+            $s->limiter->record('pwchange:7', '198.51.100.1', false);
+        }
+        // sisa kuota 1: dua begin() berurutan (ekuivalen paralel) -> hanya satu lolos
+        $a = $s->limiter->begin('pwchange:7', '198.51.100.1');
+        $b = $s->limiter->begin('pwchange:7', '198.51.100.2');
+        self::assertNotNull($a);
+        self::assertNull($b);
+        self::assertTrue($s->limiter->blocked('pwchange:7'));
+        // yang diblokir tidak menambah hitungan; setelah jendela lewat boleh lagi
+        $s->clock->advance('+16 minutes');
+        self::assertNotNull($s->limiter->begin('pwchange:7', '198.51.100.1'));
+    }
+
+    public function testBeginSuksesTidakMenguncikanLoginSah(): void
+    {
+        $s = new Stack();
+        for ($i = 0; $i < 20; $i++) {
+            $id = $s->limiter->begin('ani@example.test', '198.51.100.1');
+            self::assertNotNull($id);
+            $s->limiter->markSuccess($id);
+        }
+        self::assertFalse($s->limiter->blocked('ani@example.test'));
+    }
 }

@@ -68,28 +68,28 @@ final class MfaSetupController
             return Response::redirect('/account/mfa', 303);
         }
         $key = 'mfa:' . $user->id;
-        if ($this->limiter->blocked($key)) {
-            return $this->show($request, self::MSG_BLOCKED, 429);
-        }
         $enc = UiSession::get('mfa_setup');
         if (!is_string($enc)) {
             return Response::redirect('/account/mfa', 303);
+        }
+        $attempt = $this->limiter->begin($key, $request->ip());
+        if ($attempt === null) {
+            return $this->show($request, self::MSG_BLOCKED, 429);
         }
         $secret = $this->crypto->decrypt($enc);
         $code = (string) $request->input('code', '');
         $step = strlen($code) > 16 ? null : $this->totp->verify($secret, $code, null);
         if ($step === null) {
-            $this->limiter->record($key, $request->ip(), false);
             $this->audit->record('mfa.failure', $user->id, $user->id, null, ['stage' => 'setup']);
 
             return $this->show($request, 'Kode tidak valid. Pastikan jam perangkat Anda tepat, lalu coba lagi.', 422);
         }
+        $this->limiter->markSuccess($attempt);
         $codes = $this->backup->generate();
         $ok = $this->users->enableMfa($user->id, $this->crypto->encrypt($secret), $codes['hashes'], $step, $this->clock->now());
         if (!$ok) {
             return Response::redirect('/account/mfa', 303);
         }
-        $this->limiter->record($key, $request->ip(), true);
         $this->audit->record('mfa.enabled', $user->id, $user->id);
 
         // MFA baru saja lulus: ganti id sesi SSO dan sesi UI (anti-fixation), lalu tampilkan kode cadangan sekali saja.
@@ -141,20 +141,20 @@ final class MfaSetupController
             return Response::redirect('/account/mfa', 303);
         }
         $key = 'mfa:' . $user->id;
-        if ($this->limiter->blocked($key)) {
-            return $this->show($request, self::MSG_BLOCKED, 429);
-        }
         $password = (string) $request->input('password', '');
         if ($user->passwordHash === null) {
             return $this->show($request, 'Akun ini belum punya kata sandi. Buat dulu lewat "Lupa kata sandi" di halaman masuk.', 422);
         }
+        $attempt = $this->limiter->begin($key, $request->ip());
+        if ($attempt === null) {
+            return $this->show($request, self::MSG_BLOCKED, 429);
+        }
         if (strlen($password) > 1024 || !$this->hasher->verify($password, $user->passwordHash)) {
-            $this->limiter->record($key, $request->ip(), false);
             $this->audit->record('mfa.password_failure', $user->id, $user->id);
 
             return $this->show($request, 'Kata sandi salah.', 422);
         }
-        $this->limiter->record($key, $request->ip(), true);
+        $this->limiter->markSuccess($attempt);
 
         return null;
     }
