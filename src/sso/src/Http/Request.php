@@ -25,9 +25,10 @@ final class Request
     ) {
     }
 
-    public static function fromGlobals(): self
+    /** @param array<mixed> $trustedProxies */
+    public static function fromGlobals(array $trustedProxies = []): self
     {
-        return self::fromArrays($_SERVER, $_GET, $_POST, $_COOKIE);
+        return self::fromArrays($_SERVER, $_GET, $_POST, $_COOKIE, $trustedProxies);
     }
 
     /**
@@ -35,9 +36,15 @@ final class Request
      * @param array<string,mixed> $get
      * @param array<string,mixed> $post
      * @param array<string,mixed> $cookie
+     * @param array<mixed> $trustedProxies
      */
-    public static function fromArrays(array $server, array $get = [], array $post = [], array $cookie = []): self
-    {
+    public static function fromArrays(
+        array $server,
+        array $get = [],
+        array $post = [],
+        array $cookie = [],
+        array $trustedProxies = [],
+    ): self {
         $headers = [];
         foreach ($server as $key => $value) {
             if (!is_string($value)) {
@@ -67,12 +74,12 @@ final class Request
                 $cookies[(string) $name] = $value;
             }
         }
-        $remote = is_string($server['REMOTE_ADDR'] ?? null) ? $server['REMOTE_ADDR'] : '0.0.0.0';
+        $remote = ClientIp::resolve($server, $trustedProxies);
 
         return new self($method, $path, $get, $post, $headers, $cookies, [], $remote);
     }
 
-    /** Alamat langsung peer; header X-Forwarded-For sengaja tidak dipercaya. */
+    /** IP klien via ClientIp::resolve (XFF hanya bila peer ada di trusted_proxies). */
     public function ip(): string
     {
         return $this->remoteAddr;
