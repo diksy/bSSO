@@ -71,6 +71,19 @@ final class Crypto
         return hash_hmac('sha256', $data, $this->hmacKey);
     }
 
+    public function currentVersion(): string
+    {
+        return $this->current;
+    }
+
+    /** Versi keyring pada ciphertext, atau null bila formatnya tidak dikenali. */
+    public function versionOf(string $ciphertext): ?string
+    {
+        $pos = strpos($ciphertext, ':');
+
+        return $pos === false || $pos === 0 ? null : substr($ciphertext, 0, $pos);
+    }
+
     public function reencrypt(string $ciphertext): string
     {
         return $this->encrypt($this->decrypt($ciphertext));

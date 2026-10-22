@@ -40,3 +40,4 @@
 | 2026-10-22 | Tes MariaDB opt-in: `BSSO_TEST_DB=mariadb` + `DB_*` env (DB_NAME wajib berakhiran `_test`); skema asli dari migrations. Hasil MariaDB 13.0.2: migrasi 001+002 OK & idempoten, 350/350 tes lulus (~16 mnt) setelah 3 fixture tes diperbaiki | Pemilik minta verifikasi di MariaDB dev; SQLite longgar menyembunyikan NOT NULL/FK |
 | 2026-10-22 | Rilis disetujui pemilik via Telegram; spec.md & prototype-feedback.md diarsipkan. Apple .p8 tetap terenkripsi di DB (default) | Jawaban pemilik |
 | 2026-10-22 | IP klien: X-Forwarded-For hanya dipercaya dari `trusted_proxies` (config/app.php, default kosong), diproses dari kanan, fail-closed; satu sumber ClientIp untuk Request dan Audit (T15, S5) | Disetujui pemilik via Telegram |
+| 2026-10-22 | bin/reencrypt.php diimplementasi (Reencryptor): hanya kolom *_enc persisten; hmac_key tidak dirotasi (kode cadangan MFA jadi tidak valid bila diganti) (T16) | Disetujui pemilik via Telegram |
