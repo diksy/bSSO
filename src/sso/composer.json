@@ -2,7 +2,7 @@
     "name": "bikinin/sso",
     "description": "BikininSSO - OIDC Provider + broker federasi (PHP tanpa framework)",
     "type": "project",
-    "license": "proprietary",
+    "license": "AGPL-3.0-or-later",
     "require": {
         "php": ">=8.2",
         "ext-curl": "*",
