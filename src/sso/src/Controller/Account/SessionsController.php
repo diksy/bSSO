@@ -52,6 +52,7 @@ final class SessionsController
     {
         [$user] = $this->context($request);
         // Semua perangkat, termasuk sesi ini (arsitektur/requirements §6).
+        $this->terminator->deferDispatch();
         $this->terminator->endAllForUser($user->id, null, 'user_logout_all');
         $this->audit->record('session.revoke_all', $user->id, $user->id);
 
@@ -70,6 +71,7 @@ final class SessionsController
         if ($target === null || $target->userId !== $user->id || $target->revokedAt !== null) {
             throw new HttpException(404);
         }
+        $this->terminator->deferDispatch();
         $this->terminator->endSession($sid, 'user_revoke');
         $this->audit->record('session.revoke', $user->id, $user->id, null, ['sid' => $sid]);
         if ($sid === $current->sid) {

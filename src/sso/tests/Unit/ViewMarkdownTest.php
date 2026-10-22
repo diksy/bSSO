@@ -24,6 +24,15 @@ final class ViewMarkdownTest extends TestCase
         UiSession::reset();
     }
 
+    public function testMarkdownBintangGandaDiUrlTidakMasukHref(): void
+    {
+        $html = (new Markdown())->toHtml('[a **b**](https://a.test/**x**/y) dan **tebal**');
+        self::assertStringContainsString('href="https://a.test/**x**/y"', $html);
+        self::assertStringNotContainsString('href="https://a.test/<strong>', $html);
+        self::assertStringContainsString('>a <strong>b</strong></a>', $html);
+        self::assertStringContainsString('<strong>tebal</strong>', $html);
+    }
+
     public function testMarkdownEscapeFirstDanHanyaLinkHttp(): void
     {
         $html = (new Markdown())->toHtml("# Judul <script>\n\n<img src=x onerror=alert(1)> **tebal** `<b>`\n\n[ok](https://a.test/x?a=1&b=2) [js](javascript:alert(1)) [rel](/x)\n\n- satu\n- dua\n\n```php\n<?php echo 1;\n```");

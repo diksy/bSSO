@@ -13,7 +13,7 @@ final class LoginAttemptRepository
     {
     }
 
-    public function add(string $identifier, string $ip, bool $success, \DateTimeImmutable $at): void
+    public function add(string $identifier, string $ip, bool $success, \DateTimeImmutable $at): int
     {
         $stmt = $this->db->pdo()->prepare(
             'INSERT INTO login_attempts (identifier, ip_address, success, attempted_at) VALUES (?, ?, ?, ?)',
@@ -23,6 +23,18 @@ final class LoginAttemptRepository
         $stmt->bindValue(3, $success ? 1 : 0, \PDO::PARAM_INT);
         $stmt->bindValue(4, Db::fmt($at));
         $stmt->execute();
+
+        return (int) $this->db->pdo()->lastInsertId();
+    }
+
+    public function markSuccess(int $id): void
+    {
+        $this->db->pdo()->prepare('UPDATE login_attempts SET success = 1 WHERE id = ?')->execute([$id]);
+    }
+
+    public function delete(int $id): void
+    {
+        $this->db->pdo()->prepare('DELETE FROM login_attempts WHERE id = ?')->execute([$id]);
     }
 
     public function countFailures(string $identifier, \DateTimeImmutable $since): int

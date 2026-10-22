@@ -21,7 +21,7 @@ final class UrlAllowlist
 
     private const V6_BLOCKED = [
         '::/128', '::1/128', 'fc00::/7', 'fe80::/10', 'ff00::/8', '2001::/32', '2001:db8::/32', '2002::/16',
-        '64:ff9b::/96', '100::/64',
+        '64:ff9b::/96', '100::/64', '::/96',
     ];
 
     private const BAD_SUFFIXES = ['.local', '.localhost', '.internal', '.localdomain', '.lan', '.intranet', '.corp', '.home.arpa'];

@@ -49,7 +49,7 @@ final class RegisterController
             return $this->render($email, $name, 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
         }
         // Setiap percobaan dihitung agar pendaftaran massal dari satu IP dibatasi.
-        $this->limiter->record($key, $request->ip(), false);
+        $this->limiter->strike($key);
 
         if (strlen($email) > 255 || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             return $this->render($email, $name, 'Alamat email tidak valid.', 422);
@@ -75,7 +75,11 @@ final class RegisterController
         } elseif ($existing->status === 'pending' && $existing->emailVerifiedAt === null) {
             // Anti pra-pembajakan: pendaftaran ulang atas akun belum terverifikasi menimpa password & nama.
             // Token verifikasi terikat ke password_hash, sehingga token pendaftaran sebelumnya otomatis gugur.
-            if ($this->users->replacePendingRegistration($existing->id, $hash, $name)) {
+            // Batas kirim ulang per email (3/jam) agar pendaftaran ulang tidak dipakai membanjiri kotak masuk korban; respons tetap sama.
+            if (
+                $this->limiter->hit('regmail:' . $email, $request->ip(), 3, '-1 hour')
+                && $this->users->replacePendingRegistration($existing->id, $hash, $name)
+            ) {
                 $this->audit->record('register', $existing->id, $existing->id);
                 $this->sendVerification($existing->id, $email, $hash);
             }

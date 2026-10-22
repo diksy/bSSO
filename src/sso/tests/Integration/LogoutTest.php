@@ -587,21 +587,23 @@ final class LogoutTest extends TestCase
         self::assertFalse($this->active($s2->sid));
         self::assertTrue($this->active($s3->sid));
         self::assertNotNull($this->rt->findByHash('hx')?->revokedAt);
+        self::assertSame([], $this->sent, 'back-channel ditunda sampai respons terkirim');
+        self::assertCount(1, $this->deferred);
     }
 
     // ---- cron ----
 
-    public function testCronRunnerRunsTasksAndSurvivesStubbedGc(): void
+    public function testCronRunnerRunsTasksAndAndGc(): void
     {
         [$session] = $this->login();
         $this->plan = [500, 500];
         $this->logout->endSession($session->sid, 'test');
         $this->s->clock->advance('+2 minutes');
         $this->plan = [204, 204];
-        $runner = new CronRunner($this->notifier, $this->km, new Gc(), new Logger(sys_get_temp_dir() . '/bsso-test-logs'));
+        $runner = new CronRunner($this->notifier, $this->km, new Gc($this->s->db, $this->s->clock), new Logger(sys_get_temp_dir() . '/bsso-test-logs'));
         $out = $runner->run();
         self::assertSame('terkirim 2', $out['logout_retry']);
         self::assertSame('tidak ada', $out['rotate_keys']);
-        self::assertSame('dilewati', $out['gc']);
+        self::assertSame('dihapus 0', $out['gc']);
     }
 }

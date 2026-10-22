@@ -15,8 +15,7 @@ use App\Support\Flash;
 use App\Support\Gc;
 
 /**
- * Pemeliharaan untuk hosting tanpa cron (maintenance:manage; rotate-keys + step-up). Gc::run() masih stub sampai T11:
- * LogicException ditampilkan sebagai "belum tersedia", bukan galat.
+ * Pemeliharaan untuk hosting tanpa cron (maintenance:manage; rotate-keys + step-up).
  */
 final class MaintenanceController
 {
@@ -44,13 +43,9 @@ final class MaintenanceController
     public function gc(Request $request): Response
     {
         $actor = $this->page->actor($request);
-        try {
-            $deleted = $this->gc->run();
-            $this->audit->record('maintenance.gc', $actor->id, null, null, ['after' => ['deleted' => $deleted]]);
-            Flash::add('ok', 'GC selesai: ' . array_sum($deleted) . ' baris dihapus.');
-        } catch (\LogicException) {
-            Flash::add('warn', 'GC belum tersedia (menunggu modul pengerasan).');
-        }
+        $deleted = $this->gc->run();
+        $this->audit->record('maintenance.gc', $actor->id, null, null, ['after' => ['deleted' => $deleted]]);
+        Flash::add('ok', 'GC selesai: ' . array_sum($deleted) . ' baris dihapus.');
 
         return $this->back($request);
     }

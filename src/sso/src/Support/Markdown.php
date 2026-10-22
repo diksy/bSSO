@@ -109,12 +109,18 @@ final class Markdown
             return "\x01" . (count($codes) - 1) . "\x01";
         }, str_replace("\x01", '', $s)) ?? $s;
         $s = $this->esc($s);
-        $s = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $s) ?? $s;
-        $s = preg_replace(
+        // Tautan lebih dulu (href disimpan apa adanya, tidak disentuh pemrosesan ** di bawah).
+        $s = preg_replace_callback(
             '/\[([^\]]+)\]\((https?:\/\/[^\s)"\'<>]+)\)/',
-            '<a href="$2" rel="noopener noreferrer">$1</a>',
+            function (array $m) use (&$codes): string {
+                $codes[] = '<a href="' . $m[2] . '" rel="noopener noreferrer">'
+                    . (preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $m[1]) ?? $m[1]) . '</a>';
+
+                return "\x01" . (count($codes) - 1) . "\x01";
+            },
             $s,
         ) ?? $s;
+        $s = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $s) ?? $s;
 
         return preg_replace_callback('/\x01(\d+)\x01/', static fn (array $m): string => $codes[(int) $m[1]], $s) ?? $s;
     }

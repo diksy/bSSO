@@ -26,7 +26,7 @@ final class RateLimiter
             || $this->attempts->countFailuresByIp($ip, $since) >= self::IP_LIMIT;
     }
 
-    /** @param string $identifier email, 'token:<client_id>', atau 'mfa:<user_id>' */
+    /** @param string $identifier email, 'mfa:<user_id>' */
     public function record(string $identifier, string $ip, bool $success): void
     {
         $this->attempts->add(self::norm($identifier), $ip, $success, $this->clock->now());
@@ -36,6 +36,37 @@ final class RateLimiter
     public function blocked(string $identifier): bool
     {
         return $this->attempts->countFailures(self::norm($identifier), $this->clock->now()->modify(self::WINDOW)) >= self::EMAIL_LIMIT;
+    }
+
+    /**
+     * Catat kegagalan untuk pembatas generik TANPA alamat IP (0.0.0.0) agar tidak ikut kuota IP login
+     * (register:, forgot:, dll. berdiri sendiri).
+     */
+    public function strike(string $identifier): void
+    {
+        $this->attempts->add(self::norm($identifier), '0.0.0.0', false, $this->clock->now());
+    }
+
+    /**
+     * Pembatas atomik 5 gagal/15 menit: percobaan dicatat (sebagai gagal) SEBELUM diperiksa lalu dihitung, sehingga
+     * request serentak tidak bisa sama-sama lolos. Null = diblokir. Panggil markSuccess() bila percobaan berhasil.
+     */
+    public function begin(string $identifier, string $ip): ?int
+    {
+        $id = self::norm($identifier);
+        $rowId = $this->attempts->add($id, $ip, false, $this->clock->now());
+        if ($this->attempts->countFailures($id, $this->clock->now()->modify(self::WINDOW)) > self::EMAIL_LIMIT) {
+            $this->attempts->delete($rowId);
+
+            return null;
+        }
+
+        return $rowId;
+    }
+
+    public function markSuccess(int $attemptId): void
+    {
+        $this->attempts->markSuccess($attemptId);
     }
 
     /**
@@ -53,14 +84,21 @@ final class RateLimiter
         return true;
     }
 
-    /** 60 request per klien per menit; request yang diizinkan dicatat. */
-    public function tokenAllowed(string $clientId): bool
+    /**
+     * Endpoint klien (/token, /introspect, /revoke): batas per IP (semua klien) dan per pasangan klien+IP per menit.
+     * Kunci tidak memuat klien saja agar pihak luar tak bisa menghabiskan kuota klien sah.
+     */
+    public function clientEndpointAllowed(string $scope, string $clientId, string $ip, int $perClient, int $perIp): bool
     {
-        $id = 'token:' . $clientId;
-        if ($this->attempts->countAll($id, $this->clock->now()->modify('-1 minute')) >= 60) {
+        $since = $this->clock->now()->modify('-1 minute');
+        $ipId = self::norm($scope . 'ip:' . $ip);
+        $clientIpId = self::norm($scope . ':' . $clientId . '@' . $ip);
+        if ($this->attempts->countAll($ipId, $since) >= $perIp || $this->attempts->countAll($clientIpId, $since) >= $perClient) {
             return false;
         }
-        $this->attempts->add($id, '0.0.0.0', true, $this->clock->now());
+        $now = $this->clock->now();
+        $this->attempts->add($ipId, $ip, true, $now);
+        $this->attempts->add($clientIpId, $ip, true, $now);
 
         return true;
     }

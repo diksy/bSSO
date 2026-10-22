@@ -51,8 +51,8 @@ final class PasswordResetController
         }
         $key = 'forgot:' . $email;
         // Respons selalu sama (juga saat dibatasi atau email tidak ada).
-        if (!$this->limiter->blocked($key)) {
-            $this->limiter->record($key, $request->ip(), false);
+        if (!$this->limiter->blocked($key) && $this->limiter->hit('forgotip:' . $request->ip(), $request->ip(), 20)) {
+            $this->limiter->strike($key);
             $user = $this->users->findByEmail($email);
             if ($user !== null && in_array($user->status, ['active', 'pending'], true) && $user->email !== null) {
                 $this->sendLink($user);

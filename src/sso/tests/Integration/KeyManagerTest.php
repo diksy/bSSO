@@ -95,6 +95,16 @@ final class KeyManagerTest extends TestCase
         self::assertNull($this->km->rotateIfDue());
     }
 
+    public function testInstalasiKosongMengunciBarisSentinelDanHanyaSatuKunciAktif(): void
+    {
+        $this->make()->rotateIfDue();
+        $this->make()->rotateIfDue(); // proses kedua (cache kosong) tidak membuat kunci aktif kedua
+        $n = (int) $this->db->pdo()->query("SELECT COUNT(*) FROM signing_keys WHERE status = 'active'")->fetchColumn();
+        self::assertSame(1, $n);
+        $lock = (int) $this->db->pdo()->query("SELECT COUNT(*) FROM settings WHERE name = 'lock.signing_keys'")->fetchColumn();
+        self::assertSame(1, $lock, 'baris sentinel untuk SELECT ... FOR UPDATE pada instalasi kosong');
+    }
+
     public function testSiklusPenuhTerjadwal(): void
     {
         $this->km->rotateIfDue();

@@ -287,6 +287,30 @@ final class AdminTest extends TestCase
         self::assertSame(302, $this->call('GET', '/admin', $cookie)->status);
     }
 
+    public function testAksesAccountTidakMereseIdleAdmin(): void
+    {
+        [, $cookie] = $this->admin('superadmin');
+        self::assertSame(200, $this->call('GET', '/admin', $cookie)->status);
+        $this->s->clock->advance('+10 minutes');
+        $this->call('GET', '/account', $cookie);
+        $this->s->clock->advance('+10 minutes');
+        $res = $this->call('GET', '/admin', $cookie);
+        self::assertSame(302, $res->status);
+        self::assertStringStartsWith('/login', $res->headers['Location']);
+        self::assertSame(1, $this->auditCount('admin.idle_logout'));
+    }
+
+    public function testStepUpTidakMenghidupkanKembaliSesiAdminYangIdle(): void
+    {
+        [, $cookie] = $this->admin('superadmin');
+        $this->call('GET', '/admin', $cookie);
+        $this->s->clock->advance('+16 minutes');
+        $res = $this->call('GET', '/admin/stepup', $cookie);
+        self::assertSame(303, $res->status);
+        self::assertSame('/login', $res->headers['Location']);
+        self::assertNotNull($this->s->sessions->findByIdHash(hash('sha256', $cookie))?->revokedAt);
+    }
+
     public function testIdleMengikutiPengaturanAdminIdleMinutes(): void
     {
         [$u, $cookie] = $this->admin('superadmin');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Admin\AdminIdle;
 use App\Admin\AdminPolicy;
 use App\Http\HttpException;
 use App\Http\Request;
@@ -23,7 +24,8 @@ use App\Support\Clock;
  */
 final class RequireAdmin implements Middleware
 {
-    public const DEFAULT_IDLE_MINUTES = 15;
+    public const DEFAULT_IDLE_MINUTES = AdminIdle::DEFAULT_MINUTES;
+    private readonly AdminIdle $idle;
 
     public function __construct(
         private readonly AdminPolicy $policy,
@@ -36,6 +38,7 @@ final class RequireAdmin implements Middleware
         private readonly ?SsoSessionManager $sessions = null,
         private readonly ?Audit $audit = null,
     ) {
+        $this->idle = new AdminIdle($settings, $clock);
     }
 
     public function process(Request $r, callable $next): Response
@@ -60,9 +63,10 @@ final class RequireAdmin implements Middleware
             ]);
             throw new HttpException(403);
         }
-        if ($this->idle($session)) {
+        if ($this->idle->isIdle($session)) {
             return $this->forceLogin($r, $session, $user);
         }
+        $this->idle->markActive($session);
 
         if ($session->mfaPassedAt === null) {
             // Sesi tidak pernah melewati MFA: wajib verifikasi lebih dulu.
@@ -71,15 +75,6 @@ final class RequireAdmin implements Middleware
 
         /** @var Response */
         return $next($r->withAttribute('admin_role', $record->role));
-    }
-
-    private function idle(SsoSession $session): bool
-    {
-        $minutes = $this->settings?->int('admin.idle_minutes', self::DEFAULT_IDLE_MINUTES) ?? self::DEFAULT_IDLE_MINUTES;
-        $minutes = max(1, min(240, $minutes));
-        $now = $this->clock?->now() ?? new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
-
-        return $session->lastSeenAt->getTimestamp() + $minutes * 60 <= $now->getTimestamp();
     }
 
     private function forceLogin(Request $r, SsoSession $session, User $user): Response
