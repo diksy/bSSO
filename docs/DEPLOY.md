@@ -38,9 +38,9 @@ Izin: `chmod 600 config/secrets.php config/database.php config/app.php`. Isi `se
 
 Pilih satu:
 - SSH: `php bin/create-admin.php --email=admin@contoh.id` (kata sandi lewat prompt atau env `BSSO_ADMIN_PASSWORD`).
-- Tanpa SSH: buka `https://sso.contoh.id/install`. Halaman aktif selama tabel `admin_roles` kosong dan `storage/install.lock` belum ada.
+- Tanpa SSH: set token lalu buka `https://sso.contoh.id/install`. Halaman aktif selama tabel `admin_roles` kosong dan `storage/install.lock` belum ada.
 
-PENTING: set env `BSSO_INSTALL_TOKEN` (nilai acak panjang) SEBELUM membuka `/install`, lalu isi token itu di form. Jika kosong, SIAPA PUN yang lebih dulu membuka `/install` menjadi superadmin. Cara set di cPanel: `SetEnv BSSO_INSTALL_TOKEN ...` di `.htaccess` sementara, atau variabel lingkungan PHP-FPM; pastikan form menampilkan kolom token. Hapus token setelah instalasi selesai. Login pertama: aktifkan MFA (wajib untuk area admin).
+`/install` fail-closed: tanpa env `BSSO_INSTALL_TOKEN` (tidak diset/kosong) GET dan POST `/install` selalu 404. Untuk mengaktifkannya, set `BSSO_INSTALL_TOKEN` (nilai acak panjang) lalu isi token di form (atau header `X-Install-Token`; jangan lewat query string). Token salah juga 404. Cara set di cPanel: `SetEnv BSSO_INSTALL_TOKEN ...` di `.htaccess` sementara, atau variabel lingkungan PHP-FPM; hapus setelah instalasi. Jalur yang disarankan tanpa token: `bin/create-admin.php` lewat SSH. Login pertama: aktifkan MFA (wajib untuk area admin).
 
 ## 6. Cron
 
@@ -70,7 +70,7 @@ Daftarkan callback `https://sso.contoh.id/federation/<slug>/callback` di setiap 
 
 - [ ] `debug=false`, webroot hanya `public_html`, `config/*` dan `keys/` tidak dapat diakses lewat web (uji `https://sso.contoh.id/../sso/config/app.php` dan `/keys/`)
 - [ ] izin `keys/` 700/600, `config/secrets.php` 600
-- [ ] `BSSO_INSTALL_TOKEN` dipakai lalu dihapus; `storage/install.lock` ada
+- [ ] `BSSO_INSTALL_TOKEN` (bila dipakai) dihapus; `storage/install.lock` ada
 - [ ] cron aktif (cek log dasbor admin: tidak ada notifikasi logout gagal)
 - [ ] HTTPS valid, header HSTS/CSP terkirim (`curl -sI`)
 - [ ] `/.well-known/openid-configuration` dan `/jwks` merespons

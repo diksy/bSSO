@@ -865,6 +865,7 @@ final class AdminManageTest extends TestCase
     public function testInstallLockDilepasBilaCreateGagalTakTerduga(): void
     {
         $s = $this->s;
+        putenv('BSSO_INSTALL_TOKEN=rahasia-token');
         $s->db->pdo()->exec('DROP TABLE audit_logs'); // admin.bootstrap audit gagal setelah transaksi? pastikan gagal di create
         $s->db->pdo()->exec('DROP TABLE users');
         $ctl = new InstallController(
@@ -874,11 +875,12 @@ final class AdminManageTest extends TestCase
             $s->limiter,
         );
         try {
-            $ctl->submit(new Request('POST', '/install', [], ['email' => 'root@example.test', 'password' => 'kata-sandi-panjang-1', 'password2' => 'kata-sandi-panjang-1'], [], [], [], '198.51.100.7'));
+            $ctl->submit(new Request('POST', '/install', [], ['email' => 'root@example.test', 'password' => 'kata-sandi-panjang-1', 'password2' => 'kata-sandi-panjang-1', 'install_token' => 'rahasia-token'], [], [], [], '198.51.100.7'));
             self::fail('seharusnya melempar');
         } catch (\Throwable $e) {
             self::assertNotInstanceOf(\App\Http\HttpException::class, $e);
         }
+        putenv('BSSO_INSTALL_TOKEN');
         self::assertFileDoesNotExist($this->lock, 'install.lock tak boleh tertinggal tanpa admin');
     }
 
