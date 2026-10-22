@@ -1,6 +1,6 @@
 <!-- maks 120 baris -->
 # Arsitektur – BikininSSO (mode hybrid)
-Rujukan normatif detail: `requirements.md` §2–§11 (endpoint, alur token, skema §4, driver §5, logout §6, kunci §7, admin §8, keamanan §10, kriteria M1–M8 §11). Dokumen ini hanya menambah keputusan, urutan, dan kontrak. Salvage: `docs/salvage.md`.
+Rujukan normatif detail: `docs/requirements.md` §2–§11 (endpoint, alur token, skema §4, driver §5, logout §6, kunci §7, admin §8, keamanan §10, kriteria M1–M8 §11). Dokumen ini hanya menambah keputusan, urutan, dan kontrak. Salvage: `docs/salvage.md`.
 
 ## 1. Stack final
 - PHP 8.2+, `declare(strict_types=1)`, PSR-4 `App\` → `sso/src/`, PSR-12, class `final` kecuali abstrak. Tanpa framework. MariaDB 10.5+ InnoDB utf8mb4.
@@ -103,5 +103,5 @@ Pembayaran: tidak ada; jika kelak ditambah, wajib tokenisasi gateway dan data ka
 
 ## 5. Keputusan terbuka (pemilik proyek)
 - QR code MFA: tidak ada library QR yang disetujui. Usulan: setujui `chillerlan/php-qrcode` (MIT, SVG); sementara tampilkan kunci manual + `otpauth://` tanpa QR.
-- `requirements.md` jangan dihapus sampai modul 11 selesai (dokumen ini merujuknya; batas 120 baris).
+- `docs/requirements.md` adalah rujukan normatif (dipindah dari root saat proyek dibuka sebagai open source); jangan dihapus.
 - SMTP vs `mail()`, PHP-FPM, cron, SSH, domain final: asumsi requirements §12 berlaku.

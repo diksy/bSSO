@@ -41,3 +41,4 @@
 | 2026-10-22 | Rilis disetujui pemilik via Telegram; spec.md & prototype-feedback.md diarsipkan. Apple .p8 tetap terenkripsi di DB (default) | Jawaban pemilik |
 | 2026-10-22 | IP klien: X-Forwarded-For hanya dipercaya dari `trusted_proxies` (config/app.php, default kosong), diproses dari kanan, fail-closed; satu sumber ClientIp untuk Request dan Audit (T15, S5) | Disetujui pemilik via Telegram |
 | 2026-10-22 | bin/reencrypt.php diimplementasi (Reencryptor): hanya kolom *_enc persisten; hmac_key tidak dirotasi (kode cadangan MFA jadi tidak valid bila diganti) (T16) | Disetujui pemilik via Telegram |
+| 2026-10-22 | Proyek dibuka sebagai open source dengan lisensi AGPL-3.0-or-later; requirements.md dipindah ke docs/requirements.md; prototype/ disertakan; README ID+EN | Keputusan pemilik via Telegram |
