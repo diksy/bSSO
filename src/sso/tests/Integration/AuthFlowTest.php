@@ -131,6 +131,60 @@ final class AuthFlowTest extends TestCase
         self::assertFalse($this->s->limiter->loginBlocked('baru@example.test', '198.51.100.8'));
     }
 
+    public function testEmailBentukIdentifierIpDitolakTanpaMenyentuhLimiter(): void
+    {
+        $this->makeUser();
+        $ref = $this->login()->submit($this->post('/login', ['email' => 'tidakada@example.test', 'password' => 'salah-salah-salah']));
+        $pdo = $this->s->db->pdo();
+        $pdo->exec('DELETE FROM login_attempts');
+        foreach (['ip:1.2.3.4', 'ip:127.0.0.1', 'tanpa-at'] as $bad) {
+            $r = $this->login()->submit($this->post('/login', ['email' => $bad, 'password' => 'salah-salah-salah']));
+            self::assertSame($ref->status, $r->status);
+            self::assertStringContainsString('Email atau kata sandi salah.', $r->body);
+            self::assertSame([], $r->cookies);
+        }
+        self::assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM login_attempts')->fetchColumn());
+    }
+
+    public function testBatasIpTegasDiAmbangMeskiEmailBerbeda(): void
+    {
+        for ($i = 0; $i < 20; $i++) {
+            $r = $this->login()->submit($this->post('/login', ['email' => "u$i@example.test", 'password' => 'salah-salah-salah']));
+            self::assertSame(401, $r->status, "percobaan ke-$i");
+        }
+        $r = $this->login()->submit($this->post('/login', ['email' => 'u99@example.test', 'password' => 'salah-salah-salah']));
+        self::assertSame(429, $r->status, 'percobaan ke-21 dari IP sama diblokir');
+        $this->s->clock->advance('+16 minutes');
+        $r = $this->login()->submit($this->post('/login', ['email' => 'u99@example.test', 'password' => 'salah-salah-salah']));
+        self::assertSame(401, $r->status);
+    }
+
+    public function testLoginSuksesTidakMenghabiskanKuotaIp(): void
+    {
+        $this->makeUser();
+        for ($i = 0; $i < 30; $i++) {
+            $r = $this->login()->submit($this->post('/login', ['email' => 'ani@example.test', 'password' => self::PW]));
+            self::assertSame(303, $r->status, "sukses ke-$i");
+        }
+        for ($i = 0; $i < 20; $i++) {
+            self::assertSame(401, $this->login()->submit($this->post('/login', ['email' => "v$i@example.test", 'password' => 'x-salah-salah']))->status);
+        }
+        self::assertSame(429, $this->login()->submit($this->post('/login', ['email' => 'v50@example.test', 'password' => 'x-salah-salah']))->status);
+    }
+
+    public function testEmailTerblokirTidakMenghabiskanKuotaIp(): void
+    {
+        $this->makeUser();
+        for ($i = 0; $i < 5; $i++) {
+            $this->login()->submit($this->post('/login', ['email' => 'ani@example.test', 'password' => 'salah-salah-salah']));
+        }
+        for ($i = 0; $i < 10; $i++) {
+            self::assertSame(429, $this->login()->submit($this->post('/login', ['email' => 'ani@example.test', 'password' => self::PW]))->status);
+        }
+        // email lain dari IP sama masih boleh (kuota IP tidak terkuras oleh email yang sudah terblokir)
+        self::assertSame(401, $this->login()->submit($this->post('/login', ['email' => 'lain@example.test', 'password' => 'salah-salah-salah']))->status);
+    }
+
     public function testNextEksternDiabaikan(): void
     {
         $this->makeUser();

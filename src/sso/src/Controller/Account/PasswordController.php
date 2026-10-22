@@ -61,7 +61,6 @@ final class PasswordController
         $current = (string) $request->input('current', '');
         $new = (string) $request->input('new', '');
         if (strlen($current) > 1024 || !$this->hasher->verify($current, $user->passwordHash)) {
-
             return $fail('Kata sandi saat ini salah.');
         }
         $this->limiter->markSuccess($attempt);
