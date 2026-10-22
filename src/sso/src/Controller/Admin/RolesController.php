@@ -39,7 +39,9 @@ final class RolesController
             $admins[] = ['id' => $r->userId, 'email' => $u->email ?? ('#' . $r->userId), 'admin_role' => $r->role];
         }
         $others = [];
-        foreach ($this->users->search('', 200) as $u) {
+        $q = $request->query['q'] ?? '';
+        $q = is_string($q) ? mb_substr(trim($q), 0, 100) : '';
+        foreach ($this->users->search($q, 50) as $u) {
             if (!isset($adminIds[$u->id]) && $u->status === 'active' && $u->email !== null) {
                 $others[] = ['id' => $u->id, 'email' => $u->email];
             }
@@ -60,7 +62,7 @@ final class RolesController
         }
 
         return $this->page->render($request, 'admin/roles', 'Role admin', 'roles', [
-            'admins' => $admins, 'others' => $others, 'matrix' => $matrix,
+            'admins' => $admins, 'others' => $others, 'matrix' => $matrix, 'q' => $q,
         ]);
     }
 

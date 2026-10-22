@@ -55,9 +55,15 @@ final class InstallController
         } catch (\InvalidArgumentException $e) {
             $this->guard->release(); // validasi gagal: belum ada admin, boleh diulang
             return $this->render(false, $e->getMessage(), 422);
+        } catch (\PDOException $e) {
+            $this->guard->release(); // PDOException ⊂ RuntimeException: transaksi di-rollback, belum ada admin
+            throw $e;
         } catch (\RuntimeException) {
             // Admin sudah ada (race) atau email sudah dipakai: kunci tetap, halaman tertutup.
             throw new HttpException(404);
+        } catch (\Throwable $e) {
+            $this->guard->release(); // kegagalan tak terduga (mis. DB): jangan tinggalkan install.lock tanpa admin
+            throw $e;
         }
 
         return $this->render(true, null);

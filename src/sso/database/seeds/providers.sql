@@ -8,7 +8,7 @@ VALUES
   ('apple', 'Apple', 'oidc', 'AppleDriver', '', 'https://appleid.apple.com/.well-known/openid-configuration', NULL, NULL, NULL, 'name email', 1, NULL, 0, 3),
   ('github', 'GitHub', 'oauth2', 'GitHubDriver', '', NULL, 'https://github.com/login/oauth/authorize', 'https://github.com/login/oauth/access_token', 'https://api.github.com/user', 'read:user user:email', 0, NULL, 0, 4),
   ('gitlab', 'GitLab', 'oidc', 'GitLabDriver', '', 'https://gitlab.com/.well-known/openid-configuration', NULL, NULL, NULL, 'openid email profile', 0, NULL, 0, 5),
-  ('facebook', 'Facebook', 'oauth2', 'FacebookDriver', '', NULL, 'https://www.facebook.com/dialog/oauth', 'https://graph.facebook.com/oauth/access_token', 'https://graph.facebook.com/me?fields=id,name,email,picture', 'email public_profile', 0, NULL, 0, 6),
+  ('facebook', 'Facebook', 'oauth2', 'FacebookDriver', '', NULL, 'https://www.facebook.com/v23.0/dialog/oauth', 'https://graph.facebook.com/v23.0/oauth/access_token', 'https://graph.facebook.com/v23.0/me?fields=id,name,email,picture', 'email public_profile', 0, '{"graph_version":"v23.0"}', 0, 6),
   ('linkedin', 'LinkedIn', 'oidc', 'LinkedInDriver', '', 'https://www.linkedin.com/oauth/.well-known/openid-configuration', NULL, NULL, NULL, 'openid email profile', 0, NULL, 0, 7),
   ('discord', 'Discord', 'oauth2', 'DiscordDriver', '', NULL, 'https://discord.com/oauth2/authorize', 'https://discord.com/api/oauth2/token', 'https://discord.com/api/users/@me', 'identify email', 0, NULL, 0, 8),
   ('x', 'X', 'oauth2', 'XDriver', '', NULL, 'https://x.com/i/oauth2/authorize', 'https://api.x.com/2/oauth2/token', 'https://api.x.com/2/users/me', 'users.read tweet.read', 0, '{"token_auth":"basic"}', 0, 9);
