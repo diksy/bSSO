@@ -36,7 +36,7 @@ final class GcTest extends TestCase
         $this->exec("INSERT INTO login_attempts (identifier, ip_address, success, attempted_at) VALUES ('x', 'i', 0, ?), ('y', 'i', 0, ?)", [$f('-31 days'), $f('-29 days')]);
         $this->exec("INSERT INTO audit_logs (event, created_at) VALUES ('e', ?), ('e', ?)", [$f('-366 days'), $f('-300 days')]);
         $this->exec("INSERT INTO users (id, uuid, email, created_at, updated_at) VALUES (1, 'u', 'a@b.c', ?, ?)", [$f('-1 day'), $f('-1 day')]);
-        $this->exec("INSERT INTO clients (id, client_id, name) VALUES (1, 'c', 'C')");
+        $this->exec("INSERT INTO clients (id, client_id, name, allowed_grants) VALUES (1, 'c', 'C', 'authorization_code')");
         $ins = "INSERT INTO sso_sessions (id_hash, sid, user_id, auth_method, created_at, last_seen_at, expires_at, revoked_at) VALUES (?, ?, 1, 'password', ?, ?, ?, ?)";
         $this->exec($ins, ['h1', 's1', $f('-20 days'), $f('-20 days'), $f('-8 days'), null]);      // kedaluwarsa > 7 hari
         $this->exec($ins, ['h2', 's2', $f('-20 days'), $f('-20 days'), $f('-6 days'), null]);      // kedaluwarsa < 7 hari

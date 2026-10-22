@@ -10,7 +10,7 @@ Tanggal: 2026-10-22 (pemindaian ulang setelah T12/T13) · Pemilik: security · R
 | semgrep ulang (8 berkas T12/T13: `InstallController`, `InstallGuard`, `LoginController`, `FederationController`, `Admin/StepUpController`, `Account/MfaSetupController`, `Account/PasswordController`, `RateLimiter`) | 1 temuan: `unlink-use` di `InstallGuard.php:52`, false positive yang sudah dikenal |
 | `composer audit` (`src/sso`) | 0 advisory |
 | gitleaks detect (riwayat git, 16 commit) dan `--no-git` (working tree) | 0 kebocoran |
-| OWASP ZAP baseline (DAST) | **BELUM DIJALANKAN**: ZAP dan MariaDB tidak tersedia, tidak ada URL staging. Wajib di staging sebelum rilis. |
+| OWASP ZAP baseline (DAST) | **BELUM DIJALANKAN**: ZAP tidak tersedia (MariaDB 13.0.2 sudah diuji, lihat decisions.md), tidak ada URL staging. Wajib di staging sebelum rilis. |
 
 Tinjauan manual awal: oauth-flow, federasi, admin + step-up, logout/SSRF, `/install`, sesi/cookie, CSRF, header, upload `.p8`, rate limit, escaping view. Tinjauan ulang dibatasi pada S1–S3.
 

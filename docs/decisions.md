@@ -37,3 +37,4 @@
 | 2026-10-22 | "Paksa reset password" = kirim tautan reset (berlaku 1 jam) + cabut semua sesi; password lama tidak dihapus | Menghindari user terkunci bila email gagal; token terikat hash password sehingga sekali pakai |
 | 2026-10-22 | Redirect URI `http://localhost`/`127.0.0.1` hanya diterima saat `config/app.php debug=true`; produksi wajib https | Requirements: localhost hanya untuk dev |
 | 2026-10-22 | /install fail-closed: tanpa BSSO_INSTALL_TOKEN → 404; admin pertama via bin/create-admin.php (S1) | Disetujui pemilik via Telegram (✅ atas usulan security) |
+| 2026-10-22 | Tes MariaDB opt-in: `BSSO_TEST_DB=mariadb` + `DB_*` env (DB_NAME wajib berakhiran `_test`); skema asli dari migrations. Hasil MariaDB 13.0.2: migrasi 001+002 OK & idempoten, 350/350 tes lulus (~16 mnt) setelah 3 fixture tes diperbaiki | Pemilik minta verifikasi di MariaDB dev; SQLite longgar menyembunyikan NOT NULL/FK |

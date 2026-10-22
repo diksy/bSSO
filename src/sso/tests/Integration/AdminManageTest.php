@@ -867,6 +867,9 @@ final class AdminManageTest extends TestCase
         $s = $this->s;
         putenv('BSSO_INSTALL_TOKEN=rahasia-token');
         $s->db->pdo()->exec('DROP TABLE audit_logs'); // admin.bootstrap audit gagal setelah transaksi? pastikan gagal di create
+        if ($s->db->isMysql()) {
+            $s->db->pdo()->exec('SET FOREIGN_KEY_CHECKS = 0');
+        }
         $s->db->pdo()->exec('DROP TABLE users');
         $ctl = new InstallController(
             $s->view,

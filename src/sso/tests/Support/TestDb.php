@@ -11,6 +11,9 @@ final class TestDb
 {
     public static function create(): Database
     {
+        if (getenv('BSSO_TEST_DB') === 'mariadb') {
+            return self::createMariaDb();
+        }
         $pdo = new \PDO('sqlite::memory:', null, null, [
             \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
             \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
@@ -98,5 +101,44 @@ CREATE TABLE admin_roles (user_id INTEGER PRIMARY KEY, role TEXT NOT NULL, grant
 SQL);
 
         return new Database([], $pdo);
+    }
+
+    /** Mode opt-in (BSSO_TEST_DB=mariadb): skema asli dari database/migrations pada DB bernama *_test (DB_HOST/PORT/NAME/USER/PASS). */
+    private static function createMariaDb(): Database
+    {
+        $name = (string) getenv('DB_NAME');
+        if (!str_ends_with($name, '_test')) {
+            throw new \RuntimeException('DB_NAME harus berakhiran _test agar tabel aman dihapus.');
+        }
+        // Satu koneksi dipakai ulang: koneksi lama yang tertinggal menahan metadata lock dan menggantung DROP TABLE.
+        static $db = null;
+        $db ??= new Database([
+            'host' => getenv('DB_HOST') ?: '127.0.0.1',
+            'port' => (int) (getenv('DB_PORT') ?: 3306),
+            'name' => $name,
+            'user' => (string) getenv('DB_USER'),
+            'pass' => (string) getenv('DB_PASS'),
+        ]);
+        $pdo = $db->pdo();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+        foreach ($pdo->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN) as $table) {
+            $pdo->exec('DROP TABLE `' . $table . '`');
+        }
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        $files = glob(dirname(__DIR__, 2) . '/database/migrations/*.sql') ?: [];
+        sort($files);
+        foreach ($files as $file) {
+            foreach (explode(";\n", (string) file_get_contents($file)) as $statement) {
+                $statement = rtrim(trim($statement), ';');
+                if (trim((string) preg_replace('/^\s*--.*$/m', '', $statement)) !== '') {
+                    $pdo->exec($statement);
+                }
+            }
+        }
+
+        return $db;
     }
 }

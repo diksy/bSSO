@@ -306,7 +306,7 @@ final class MfaTest extends TestCase
         $session = $this->s->sessions->findByIdHash(hash('sha256', $cookie));
         self::assertNotNull($session);
         $pdo = $this->s->db->pdo();
-        $pdo->exec("INSERT INTO clients (name) VALUES ('rp')");
+        $pdo->exec("INSERT INTO clients (client_id, name, allowed_grants) VALUES ('rp', 'rp', 'authorization_code')");
         $pdo->prepare('INSERT INTO session_clients (session_sid, client_id) VALUES (?, 1)')->execute([$session->sid]);
 
         $new = $this->s->manager->markMfaPassed($session);
