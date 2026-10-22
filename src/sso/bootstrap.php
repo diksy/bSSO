@@ -84,6 +84,14 @@ $container->set(
     SessionTerminator::class,
     static fn (Container $c): SessionTerminator => $c->get(LogoutService::class),
 );
+$container->set(
+    \App\Admin\ClientForm::class,
+    static fn (Container $c): \App\Admin\ClientForm => new \App\Admin\ClientForm(
+        $c->get(UrlAllowlist::class),
+        (bool) (($c->get('config.app'))['debug'] ?? false),
+    ),
+);
+$container->set(Gc::class, static fn (): Gc => new Gc());
 $container->set(UrlAllowlist::class, static fn (): UrlAllowlist => new UrlAllowlist());
 $container->set(HttpClient::class, static fn (Container $c): HttpClient => new HttpClient($c->get(UrlAllowlist::class)));
 $container->set(
@@ -120,7 +128,7 @@ $container->set(
     static fn (Container $c): CronRunner => new CronRunner(
         $c->get(BackchannelNotifier::class),
         $c->get(KeyManager::class),
-        new Gc(),
+        $c->get(Gc::class),
         $c->get(Logger::class),
     ),
 );

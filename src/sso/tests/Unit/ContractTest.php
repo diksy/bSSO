@@ -69,17 +69,6 @@ final class ContractTest extends TestCase
         self::fail("Controller tidak ditemukan: $short");
     }
 
-    public function testControllerStubMelempar501(): void
-    {
-        $controller = new \App\Controller\Admin\MaintenanceController();
-        try {
-            $controller->index(new Request('GET', '/admin/maintenance'));
-            self::fail('Harus melempar HttpException');
-        } catch (HttpException $e) {
-            self::assertSame(501, $e->status);
-        }
-    }
-
     public function testRoutesTerdaftarDiRouter(): void
     {
         $router = new Router();

@@ -39,6 +39,43 @@ final class IdentityProviderRepository
         return $this->many('');
     }
 
+    /**
+     * @param ?string $secretEnc null = pertahankan secret lama
+     * @param ?array<string,mixed> $extra
+     * @param array{authorize_url?: string, token_url?: string, userinfo_url?: string} $urls URL yang diganti (opsional)
+     */
+    public function updateSettings(
+        int $id,
+        string $clientId,
+        ?string $secretEnc,
+        bool $trustEmail,
+        ?array $extra,
+        bool $enabled,
+        int $sortOrder,
+        array $urls = [],
+    ): void {
+        $json = $extra === null || $extra === [] ? null : json_encode($extra, JSON_THROW_ON_ERROR);
+        $sql = 'UPDATE identity_providers SET client_id = ?, trust_email = ?, extra_config = ?, is_enabled = ?, sort_order = ?';
+        $params = [$clientId, $trustEmail ? 1 : 0, $json, $enabled ? 1 : 0, $sortOrder];
+        if ($secretEnc !== null) {
+            $sql .= ', client_secret_enc = ?';
+            $params[] = $secretEnc;
+        }
+        foreach (['authorize_url', 'token_url', 'userinfo_url'] as $col) {
+            if (isset($urls[$col])) {
+                $sql .= ", $col = ?";
+                $params[] = $urls[$col];
+            }
+        }
+        $params[] = $id;
+        $this->db->pdo()->prepare($sql . ' WHERE id = ?')->execute($params);
+    }
+
+    public function setEnabled(int $id, bool $enabled): void
+    {
+        $this->db->pdo()->prepare('UPDATE identity_providers SET is_enabled = ? WHERE id = ?')->execute([$enabled ? 1 : 0, $id]);
+    }
+
     /** @param list<mixed> $params */
     private function one(string $where, array $params): ?IdentityProvider
     {

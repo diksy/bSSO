@@ -163,6 +163,15 @@ final class UserRepository
         return array_map(fn (array $r): User => $this->hydrate($r), $stmt->fetchAll());
     }
 
+    /** Hanya active <-> suspended; pending tidak diubah (menjaga verifikasi email). */
+    public function setStatus(int $id, string $from, string $to): bool
+    {
+        $stmt = $this->db->pdo()->prepare('UPDATE users SET status = ?, updated_at = ? WHERE id = ? AND status = ?');
+        $stmt->execute([$to, $this->now(), $id, $from]);
+
+        return $stmt->rowCount() === 1;
+    }
+
     public static function normalizeEmail(string $email): string
     {
         return mb_strtolower(trim($email));

@@ -70,6 +70,32 @@ final class ClientRepository
         return $client;
     }
 
+    /** @param list<string> $grants */
+    public function update(
+        int $id,
+        string $name,
+        array $grants,
+        string $scopes,
+        int $accessTtl,
+        int $refreshTtl,
+        ?string $backchannelUri,
+    ): void {
+        $this->db->pdo()->prepare(
+            'UPDATE clients SET name = ?, allowed_grants = ?, allowed_scopes = ?, access_token_ttl = ?, '
+            . 'refresh_token_ttl = ?, backchannel_logout_uri = ? WHERE id = ?',
+        )->execute([$name, implode(',', $grants), $scopes, $accessTtl, $refreshTtl, $backchannelUri, $id]);
+    }
+
+    public function setEnabled(int $id, bool $enabled): void
+    {
+        $this->db->pdo()->prepare('UPDATE clients SET is_enabled = ? WHERE id = ?')->execute([$enabled ? 1 : 0, $id]);
+    }
+
+    public function setSecretHash(int $id, string $hash): void
+    {
+        $this->db->pdo()->prepare('UPDATE clients SET client_secret_hash = ? WHERE id = ?')->execute([$hash, $id]);
+    }
+
     /**
      * @param list<mixed> $params
      * @return array<string,mixed>|null

@@ -10,7 +10,7 @@ use App\Federation\NormalizedProfile;
 
 /**
  * GitHub (OAuth2): email dari /user/emails, hanya entri primary DAN verified (email publik di /user tidak dipercaya).
- * Endpoint emails dari extra_config.emails_url atau konstanta kode (bukan input user).
+ * Endpoint emails = konstanta kode (extra_config.emails_url dihapus: akan membawa Bearer token ke host pilihan admin).
  */
 final class GitHubDriver extends AbstractOAuth2Provider
 {
@@ -19,9 +19,8 @@ final class GitHubDriver extends AbstractOAuth2Provider
     protected function fetchUserinfo(string $accessToken): array
     {
         $user = parent::fetchUserinfo($accessToken);
-        $url = $this->config->extraConfig['emails_url'] ?? self::EMAILS_URL;
         try {
-            $user['_emails'] = $this->ctx->getJson(is_string($url) ? $url : self::EMAILS_URL, ['Authorization' => 'Bearer ' . $accessToken]);
+            $user['_emails'] = $this->ctx->getJson(self::EMAILS_URL, ['Authorization' => 'Bearer ' . $accessToken]);
         } catch (FederationException) {
             $user['_emails'] = []; // tanpa email terverifikasi; alur "lengkapi email" yang menangani
         }

@@ -16,6 +16,11 @@
 </section>
 <section class="card section">
   <h2>Beri role</h2>
+  <form method="get" action="/admin/roles" class="row search">
+    <label class="visually-hidden" for="rq">Cari user (email atau nama)</label>
+    <input id="rq" name="q" type="search" value="<?= e($q ?? '') ?>" placeholder="Cari email atau nama">
+    <button class="btn btn-secondary" type="submit">Cari</button>
+  </form>
   <form method="post" action="/admin/roles" class="row form-inline"><?= csrf_field() ?><input type="hidden" name="back" value="/admin/roles">
     <div class="field"><label for="gid">User</label><select id="gid" name="id"><?php foreach ($others as $o): ?><option value="<?= e($o['id']) ?>"><?= e($o['email']) ?></option><?php endforeach; ?></select></div>
     <div class="field"><label for="grole">Role</label><select id="grole" name="role"><?php foreach ($matrix['roles'] as $k => $lb): ?><option value="<?= e($k) ?>"><?= e($lb) ?></option><?php endforeach; ?></select></div>

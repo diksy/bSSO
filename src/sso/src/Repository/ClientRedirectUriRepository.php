@@ -38,6 +38,19 @@ final class ClientRedirectUriRepository
         return false;
     }
 
+    /**
+     * Ganti seluruh daftar URI satu jenis (panggil di dalam transaction()).
+     *
+     * @param list<string> $uris
+     */
+    public function replace(int $clientDbId, string $kind, array $uris): void
+    {
+        $this->db->pdo()->prepare('DELETE FROM client_redirect_uris WHERE client_id = ? AND kind = ?')->execute([$clientDbId, $kind]);
+        foreach (array_values(array_unique($uris)) as $uri) {
+            $this->add($clientDbId, $uri, $kind);
+        }
+    }
+
     public function add(int $clientDbId, string $uri, string $kind): void
     {
         $this->db->pdo()->prepare('INSERT INTO client_redirect_uris (client_id, uri, kind) VALUES (?, ?, ?)')

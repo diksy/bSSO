@@ -101,6 +101,12 @@ final class AuditLogRepository
                 $params[] = (int) $v;
             }
         }
+        foreach (['actor_id' => 'user_id', 'target_id' => 'target_user_id'] as $key => $col) {
+            if (isset($f[$key]) && is_int($f[$key])) {
+                $conds[] = "l.$col = ?";
+                $params[] = $f[$key];
+            }
+        }
         $event = isset($f['event']) && is_string($f['event']) ? trim($f['event']) : '';
         if ($event !== '') {
             $conds[] = "l.event LIKE ? ESCAPE '!'";
