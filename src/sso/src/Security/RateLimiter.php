@@ -26,6 +26,29 @@ final class RateLimiter
             || $this->attempts->countFailuresByIp($ip, $since) >= self::IP_LIMIT;
     }
 
+    /**
+     * Batas IP atomik (20 gagal/15 menit): dicatat dengan identifier 'ip:<ip>' (alamat 0.0.0.0 agar tidak
+     * dihitung ganda oleh countFailuresByIp) SEBELUM dihitung; bila melebihi IP_LIMIT baris dihapus dan null dikembalikan.
+     * Panggil releaseIp() bila percobaan berhasil agar login sukses tidak menghabiskan kuota IP.
+     */
+    public function beginIp(string $ip): ?int
+    {
+        $id = 'ip:' . $ip;
+        $rowId = $this->attempts->add($id, '0.0.0.0', false, $this->clock->now());
+        if ($this->attempts->countFailures($id, $this->clock->now()->modify(self::WINDOW)) > self::IP_LIMIT) {
+            $this->attempts->delete($rowId);
+
+            return null;
+        }
+
+        return $rowId;
+    }
+
+    public function releaseIp(int $ipAttemptId): void
+    {
+        $this->attempts->delete($ipAttemptId);
+    }
+
     /** @param string $identifier email, 'mfa:<user_id>' */
     public function record(string $identifier, string $ip, bool $success): void
     {

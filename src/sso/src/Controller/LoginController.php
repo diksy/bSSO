@@ -53,12 +53,22 @@ final class LoginController
         if (strlen($email) > 255 || strlen($password) > 1024) {
             return $this->render($next, '', self::GENERIC, 422);
         }
-        if ($this->limiter->loginBlocked($email, $ip)) {
-            return $this->render($next, $email, 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            // Bukan email: jangan sentuh limiter (cegah injeksi identifier seperti 'ip:<IP>'); waktu disamakan.
+            $this->hasher->verify($password, $this->hasher->dummyHash());
+            $this->audit->record('login.failure', null, null);
+
+            return $this->render($next, $email, self::GENERIC, 401);
         }
         // Atomik: percobaan dicatat sebagai gagal sebelum diverifikasi; request serentak tak bisa melewati batas.
+        $ipAttempt = $this->limiter->beginIp($ip);
+        if ($ipAttempt === null) {
+            return $this->render($next, $email, 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
+        }
         $attempt = $this->limiter->begin($email, $ip);
         if ($attempt === null) {
+            $this->limiter->releaseIp($ipAttempt);
+
             return $this->render($next, $email, 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429);
         }
 
@@ -78,6 +88,7 @@ final class LoginController
             return $this->render($next, $email, self::GENERIC, 401);
         }
         $this->limiter->markSuccess($attempt);
+        $this->limiter->releaseIp($ipAttempt);
         if ($user->status !== 'active' || $user->emailVerifiedAt === null) {
             return $this->render($next, $email, 'Email belum diverifikasi. Buka tautan verifikasi yang dikirim ke email Anda.', 403);
         }
