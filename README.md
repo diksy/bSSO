@@ -25,7 +25,7 @@ PHP >= 8.2 (ekstensi sodium, openssl, pdo_mysql, curl, mbstring), MariaDB 10.5+ 
 ```bash
 cd src/sso
 composer install
-# salin config/*.example.php menjadi config/*.php lalu isi (jangan di-commit)
+cp .env.example .env && chmod 600 .env   # isi nilainya (jangan di-commit); config/*.php opsional
 php bin/migrate.php
 php bin/create-admin.php --email=admin@contoh.id
 ```

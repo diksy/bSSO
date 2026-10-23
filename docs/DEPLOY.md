@@ -12,15 +12,22 @@ Prasyarat: PHP >= 8.2 (ekstensi sodium, openssl, pdo_mysql, curl, mbstring), Mar
 
 ## 2. Konfigurasi dan rahasia
 
-Salin tiga berkas contoh di `sso/config/` (rujuk `*.example.php`), jangan di-commit:
+**Direkomendasikan: satu berkas `sso/.env`.** Salin `sso/.env.example` menjadi `sso/.env`, isi, lalu `chmod 600 .env`. Berkas ini berada di folder `sso/` (di luar webroot, jangan pernah di `public_html/`), tidak di-commit, dan tidak boleh masuk repo, tiket, atau log. Uji bahwa `.env` tidak dapat diakses lewat web.
 
-| Berkas | Isi |
+Kunci: `APP_BASE_URL` (https publik, untuk tautan email dan issuer; bukan dari header Host), `APP_DEBUG` (HARUS `false`), `MAIL_FROM`, `KEY_DIR` (opsional), `TRUSTED_PROXIES` (dipisah koma), `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `HMAC_KEY`, `ENCRYPTION_KEY_CURRENT` (mis. `v1`), `ENCRYPTION_KEYS` (format `v1:base64,v2:base64`), serta opsional `BSSO_INSTALL_TOKEN` dan `BSSO_ADMIN_PASSWORD`. Buat nilai acak 32 byte di server: `php -r "echo base64_encode(random_bytes(32)),PHP_EOL;"` (satu untuk `HMAC_KEY`, satu untuk `v1`). Rotasi kunci: tambahkan `v2:...` ke `ENCRYPTION_KEYS`, ubah `ENCRYPTION_KEY_CURRENT=v2`, jalankan `bin/reencrypt.php`.
+
+**Alternatif: `sso/config/*.php`** (rujuk `*.example.php`: `database.php`, `app.php`, `secrets.php`; `chmod 600`). Semua berkas config bersifat opsional.
+
+Prioritas, digabung per kunci (satu kunci di env tidak menghapus kunci lain dari file):
+
+| Urutan | Sumber |
 | --- | --- |
-| `config/database.php` | host, port, nama DB, user, password |
-| `config/app.php` | `base_url` (https publik, dipakai untuk tautan email dan issuer; tidak diambil dari header Host), `mail_from`, `debug` HARUS `false`, `key_dir` (opsional) |
-| `config/secrets.php` | `hmac_key` dan `keyring` untuk enkripsi (sodium). Buat nilai acak 32 byte di server, mis. `php -r "echo base64_encode(random_bytes(32)),PHP_EOL;"`; satu untuk `hmac_key`, satu untuk `keyring.keys.v1` |
+| 1 (tertinggi) | environment server (mis. env PHP-FPM/vhost) |
+| 2 | `sso/.env` |
+| 3 | `sso/config/*.php` |
+| 4 | default bawaan (mis. DB `127.0.0.1:3306`, nama `bikinin_sso`) |
 
-Izin: `chmod 600 config/secrets.php config/database.php config/app.php`. Isi `secrets.php` tidak boleh masuk repo, tiket, atau log.
+Nilai kosong (`KEY=`) dianggap tidak di-set dan tidak menimpa sumber di bawahnya. Tanpa `HMAC_KEY` dan keyring (kunci `current` harus ada di daftar), aplikasi berhenti dengan error (fail-closed).
 
 ### 2a. Proxy tepercaya (`trusted_proxies`)
 
@@ -67,7 +74,7 @@ HTTPS wajib. Aplikasi mengirim `Strict-Transport-Security` (max-age 1 tahun, inc
 ## 8. Kunci penandatangan dan backup
 
 - Kunci RS256 dibuat otomatis saat cron/rotasi pertama; rotasi otomatis tiap 90 hari (tumpang tindih 2 hari). Rotasi darurat: halaman admin Kunci (ketik `ROTATE`) atau `php bin/rotate-key.php --emergency`; semua token lama gugur.
-- BACKUP terenkripsi di luar server: folder `keys/`, `config/secrets.php`, dan dump DB. Kehilangan `secrets.php` (keyring) membuat rahasia terenkripsi di DB (secret provider, TOTP, kunci Apple) tidak terbaca. Kehilangan `keys/` menggugurkan semua token; kunci baru dibuat otomatis tetapi sesi klien harus login ulang.
+- BACKUP terenkripsi di luar server: folder `keys/`, `.env` (atau `config/secrets.php`), dan dump DB. Kehilangan `.env`/`secrets.php` (keyring) membuat rahasia terenkripsi di DB (secret provider, TOTP, kunci Apple) tidak terbaca. Kehilangan `keys/` menggugurkan semua token; kunci baru dibuat otomatis tetapi sesi klien harus login ulang.
 - Rotasi keyring (enkripsi ulang) dengan `bin/reencrypt.php`: (1) tambah `keyring.keys.v2` di `secrets.php` (kunci baru 32 byte base64), JANGAN hapus v1; (2) set `keyring.current` = `v2`; (3) backup DB lalu `php bin/reencrypt.php --dry-run` (hanya hitungan); (4) `php bin/reencrypt.php` (idempoten, aman diulang; exit non-nol bila ada baris gagal, dilaporkan sebagai `tabel.kolom id=N` tanpa isi); (5) verifikasi: jalankan lagi dan pastikan `diubah=0 gagal=0`, uji login MFA dan provider; (6) baru hapus v1 dari keyring. Kolom yang dicakup: `users.mfa_secret_enc`, `identity_providers.client_secret_enc` (termasuk kunci .p8 Apple). Data sesi pendek (PendingActionStore, mfa_setup/mfa_codes di sesi UI) sengaja tidak dicakup: berumur pendek, kedaluwarsa sendiri; selama v1 masih ada di keyring tetap terbaca, setelah v1 dihapus pengguna cukup mengulang aksi tersebut.
 - `hmac_key` TIDAK dirotasi oleh alat ini (HMAC adalah hash satu arah, tidak bisa dienkripsi ulang). Mengganti `hmac_key` membuat semua nilai yang sudah di-HMAC tidak cocok lagi; ganti hanya bila bocor. Dampak: semua kode cadangan MFA (disimpan sebagai HMAC) tidak lagi valid; pengguna harus membuat ulang kode cadangan (atau admin mereset MFA).
 
@@ -78,7 +85,7 @@ Daftarkan callback `https://sso.contoh.id/federation/<slug>/callback` di setiap 
 ## 10. Daftar periksa go-live
 
 - [ ] `debug=false`, webroot hanya `public_html`, `config/*` dan `keys/` tidak dapat diakses lewat web (uji `https://sso.contoh.id/../sso/config/app.php` dan `/keys/`)
-- [ ] izin `keys/` 700/600, `config/secrets.php` 600
+- [ ] izin `keys/` 700/600, `.env` dan `config/secrets.php` 600; `.env` tidak dapat diakses lewat web
 - [ ] `BSSO_INSTALL_TOKEN` (bila dipakai) dihapus; `storage/install.lock` ada
 - [ ] cron aktif (cek log dasbor admin: tidak ada notifikasi logout gagal)
 - [ ] HTTPS valid, header HSTS/CSP terkirim (`curl -sI`)
