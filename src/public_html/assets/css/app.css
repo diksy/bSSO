@@ -87,7 +87,7 @@ ul.plain, ul.provider-list, ul.list-card, ul.codes { list-style: none; padding: 
 
 /* Form */
 .stack > * + * { margin-top: 1rem; }
-.field { margin: 0; border: 0; padding: 0; min-width: 0; }
+.field { margin-inline: 0; border: 0; padding: 0; min-width: 0; }
 .field label, .field legend { display: block; font-weight: 600; margin-bottom: .3rem; padding: 0; }
 input:not([type=checkbox]):not([type=radio]), select, textarea { width: 100%; min-height: 2.5rem; padding: .45rem .7rem; font: inherit; color: var(--text); background: var(--surface); border: 1px solid #8f7d7a; border-radius: 8px; }
 input:disabled, select:disabled, textarea:disabled { background: var(--surface-2); color: var(--muted); }
