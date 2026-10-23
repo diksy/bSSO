@@ -6,6 +6,7 @@ SETUP.md
 # Rahasia
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 *.p8

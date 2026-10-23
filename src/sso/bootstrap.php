@@ -39,7 +39,9 @@ use App\Support\Audit;
 use App\Support\Urls;
 use App\Session\SessionTerminator;
 use App\Support\Clock;
+use App\Support\ConfigLoader;
 use App\Support\Container;
+use App\Support\DotEnv;
 use App\Support\Database;
 use App\Support\ErrorHandler;
 use App\Support\Logger;
@@ -59,24 +61,16 @@ if (!defined('SSO_ROOT')) {
 
 require SSO_ROOT . '/vendor/autoload.php';
 
+// .env opsional (di luar webroot); tidak menimpa environment server.
+DotEnv::load(SSO_ROOT . '/.env');
+
 $container = new Container();
 
-$container->set('config.app', static function (): array {
-    $file = SSO_ROOT . '/config/app.php';
-
-    return is_file($file) ? (array) require $file : [];
-});
-$container->set('config.secrets', static function (): array {
-    $file = SSO_ROOT . '/config/secrets.php';
-    if (!is_file($file)) {
-        throw new RuntimeException('config/secrets.php tidak ditemukan');
-    }
-
-    return (array) require $file;
-});
+$container->set('config.app', static fn (): array => (new ConfigLoader(SSO_ROOT . '/config'))->app());
+$container->set('config.secrets', static fn (): array => (new ConfigLoader(SSO_ROOT . '/config'))->secrets());
 $container->set(Logger::class, static fn (): Logger => new Logger(SSO_ROOT . '/storage/logs'));
 $container->set(View::class, static fn (): View => new View(SSO_ROOT . '/views'));
-$container->set('config.database', static fn (): array => (array) require SSO_ROOT . '/config/database.php');
+$container->set('config.database', static fn (): array => (new ConfigLoader(SSO_ROOT . '/config'))->database());
 $container->set(Clock::class, static fn (): Clock => new SystemClock());
 $container->set(Database::class, static fn (Container $c): Database => new Database((array) $c->get('config.database')));
 $container->set(Mailer::class, static fn (Container $c): Mailer => new PhpMailer((string) (($c->get('config.app'))['mail_from'] ?? '')));
