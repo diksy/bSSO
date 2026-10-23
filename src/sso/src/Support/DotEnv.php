@@ -84,14 +84,14 @@ final class DotEnv
     }
 
     /**
-     * Terapkan ke environment proses tanpa menimpa variabel yang sudah ada.
+     * Terapkan ke environment proses tanpa menimpa variabel yang sudah ada, termasuk kunci $_SERVER (mis. REMOTE_ADDR).
      *
      * @param array<string,string> $vars
      */
     public static function apply(array $vars): void
     {
         foreach ($vars as $k => $v) {
-            if (getenv($k) !== false) {
+            if (getenv($k) !== false || array_key_exists($k, $_SERVER)) {
                 continue;
             }
             putenv($k . '=' . $v);
