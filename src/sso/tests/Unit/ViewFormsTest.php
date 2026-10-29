@@ -56,6 +56,17 @@ final class ViewFormsTest extends TestCase
         self::assertGreaterThan(20, $checked);
     }
 
+    public function testTombolFederasiDiLoginMembawaReturn(): void
+    {
+        $html = (new \App\Support\View(__DIR__ . '/../../views'))->render('auth/login', [
+            'title' => 'Masuk', 'error' => null, 'email' => '',
+            'next' => '/authorize?client_id=x&state=y',
+            'providers' => [['slug' => 'google', 'name' => 'Google']],
+        ])->body;
+
+        self::assertStringContainsString('href="/federation/google/start?return=%2Fauthorize%3Fclient_id%3Dx%26state%3Dy"', $html);
+    }
+
     public function testHtaccessMengecualikanWellKnown(): void
     {
         $ht = (string) file_get_contents(__DIR__ . '/../../../public_html/.htaccess');

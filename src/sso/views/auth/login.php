@@ -19,6 +19,6 @@
 <div class="divider"><span>atau lanjutkan dengan</span></div>
 <ul class="provider-list">
   <?php foreach ($providers as $p): ?>
-    <li><a class="btn btn-secondary btn-block" href="/federation/<?= e(rawurlencode($p['slug'])) ?>/start"><span class="pico" aria-hidden="true"><?= e(mb_substr($p['name'], 0, 1)) ?></span> <?= e($p['name']) ?></a></li>
+    <li><a class="btn btn-secondary btn-block" href="/federation/<?= e(rawurlencode($p['slug'])) ?>/start?return=<?= e(rawurlencode($next)) ?>"><span class="pico" aria-hidden="true"><?= e(mb_substr($p['name'], 0, 1)) ?></span> <?= e($p['name']) ?></a></li>
   <?php endforeach; ?>
 </ul>
